@@ -257,13 +257,9 @@ router.get('/', verifyToken, async (req, res, next) => {
     const projects = await prisma.project.findMany({
       where: whereClause,
       include: {
+        department: { select: { id: true, name: true, code: true } },
         group: {
-          select: {
-            name: true,
-            year: true,
-            division: true,
-            departmentId: true,
-            department: { select: { id: true, name: true, code: true } },
+          include: {
             guide: { include: { facultyProfile: true } },
             _count: { select: { members: true } },
           },
@@ -290,12 +286,12 @@ router.get('/', verifyToken, async (req, res, next) => {
       domain: p.domain,
       sdgGoals: p.sdgGoals,
       isPublished: p.isPublished,
+      department: p.department || null,
       group: {
+        id: p.group.id,
         name: p.group.name,
         year: p.group.year,
         division: p.group.division,
-        departmentId: p.group.departmentId,
-        department: p.group.department || null,
       },
       guide: p.group.guide
         ? { name: p.group.guide.name, prnNo: p.group.guide.facultyProfile?.prnNo || null }

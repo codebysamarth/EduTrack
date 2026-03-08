@@ -30,8 +30,9 @@ function Skeleton({ className = '' }: { className?: string }) {
 
 interface ProjectData {
   id: string; title: string; status: string; domain?: string
-  sdgGoals?: string[]; isPublished?: boolean
-  group?: { id: string; name: string; department?: { id: string; name: string; code: string } } | null
+  sdgGoals?: number[]; isPublished?: boolean
+  department?: { id: string; name: string; code: string } | null
+  group?: { id: string; name: string } | null
   guide?: { id: string; name: string; prnNo?: string } | null
   latestReview?: { grade?: string; marks?: number } | null
   memberCount?: number
@@ -39,11 +40,11 @@ interface ProjectData {
 
 interface ProjectDetail {
   id: string; title: string; description?: string; abstract?: string
-  status: string; domain?: string; sdgGoals?: string[]
+  status: string; domain?: string; sdgGoals?: number[]
   isPublished?: boolean; driveLink?: string; patentLink?: string
+  department?: { id: string; name: string; code: string } | null
   group?: {
     id: string; name: string; year: string; division: string
-    department?: { id: string; name: string } | null
     members?: { id: string; student: { id: string; name: string; prnNo?: string }; isLeader: boolean }[]
   } | null
   guide?: { id: string; name: string; prnNo?: string } | null
@@ -96,7 +97,7 @@ export default function AdminProjectsPage() {
       if (!p.title.toLowerCase().includes(q) && !(p.domain ?? '').toLowerCase().includes(q) &&
         !(p.guide?.name ?? '').toLowerCase().includes(q) && !(p.group?.name ?? '').toLowerCase().includes(q)) return false
     }
-    if (filterDept && p.group?.department?.id !== filterDept) return false
+    if (filterDept && p.department?.id !== filterDept) return false
     if (filterStatus && p.status !== filterStatus) return false
     return true
   })
@@ -232,7 +233,7 @@ export default function AdminProjectsPage() {
                       </div>
                     ) : <span className="text-xs text-[#4A5B7A]">—</span>}
                   </td>
-                  <td className="py-3 px-4 text-[#7A8BAF] text-xs">{p.group?.department?.code ?? '—'}</td>
+                  <td className="py-3 px-4 text-[#7A8BAF] text-xs">{p.department?.code ?? '—'}</td>
                   <td className="py-3 px-4 text-[#7A8BAF] text-xs">{p.domain ?? '—'}</td>
                   <td className="py-3 px-4">
                     <div className="flex flex-wrap gap-0.5">
@@ -322,7 +323,7 @@ export default function AdminProjectsPage() {
                       { label: 'SDG Goals', value: (detailProject.sdgGoals ?? []).join(', ') || '—' },
                       { label: 'Published', value: detailProject.isPublished ? 'Yes' : 'No' },
                       { label: 'Group', value: detailProject.group?.name ?? '—' },
-                      { label: 'Department', value: detailProject.group?.department?.name ?? '—' },
+                      { label: 'Department', value: detailProject.department?.name ?? '—' },
                       { label: 'Guide', value: detailProject.guide?.name ?? '—' },
                     ].map(r => (
                       <div key={r.label} className="flex items-start justify-between py-2 border-b border-[#2A3A5C]/50">

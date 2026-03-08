@@ -31,8 +31,9 @@ function Skeleton({ className = '' }: { className?: string }) {
 
 interface ProjectData {
   id: string; title: string; status: string; domain?: string
-  sdgGoals?: string[]; isPublished?: boolean
-  group?: { id: string; name: string; department?: { id: string; name: string; code: string } } | null
+  sdgGoals?: number[]; isPublished?: boolean
+  department?: { id: string; name: string; code: string } | null
+  group?: { id: string; name: string } | null
   guide?: { id: string; name: string; prnNo?: string } | null
   latestReview?: { grade?: string; marks?: number } | null
   memberCount?: number
