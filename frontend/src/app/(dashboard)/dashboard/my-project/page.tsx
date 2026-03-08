@@ -21,7 +21,7 @@ const SDG_NAMES: Record<number, string> = {
   15:'Life on Land',16:'Peace & Justice',17:'Partnerships',
 }
 const DOMAINS = ['Web Development','IoT','AI/ML','Blockchain','Mobile App','Embedded Systems','Cybersecurity','Data Science','Robotics','Other']
-const STATUS_STEPS = ['DRAFT','SUBMITTED','UNDER_REVIEW','APPROVED','PUBLISHED'] as const
+const STATUS_STEPS = ['DRAFT','SUBMITTED','UNDER_REVIEW','APPROVED','COMPLETED','PUBLISHED'] as const
 const STATUS_LABELS: Record<string,string> = {
   DRAFT:'Draft',SUBMITTED:'Submitted',UNDER_REVIEW:'Under Review',
   APPROVED:'Approved',REJECTED:'Rejected',COMPLETED:'Completed',PUBLISHED:'Published',
@@ -31,14 +31,18 @@ const STATUS_COLORS: Record<string,string> = {
   SUBMITTED:'bg-blue-500/20 text-blue-400 border-blue-500/30',
   UNDER_REVIEW:'bg-amber-500/20 text-amber-400 border-amber-500/30',
   REJECTED:'bg-red-500/20 text-red-400 border-red-500/30',
-  APPROVED:'bg-green-500/20 text-green-400 border-green-500/30',
+  APPROVED:'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
   COMPLETED:'bg-purple-500/20 text-purple-400 border-purple-500/30',
-  PUBLISHED:'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+  PUBLISHED:'bg-violet-500/20 text-violet-400 border-violet-500/30',
 }
 const STEP_DESC: Record<string,string> = {
-  DRAFT:'Create your project proposal',SUBMITTED:'Submitted for guide review',
-  UNDER_REVIEW:'Guide is reviewing your project',APPROVED:'Project approved by guide',
-  PUBLISHED:'Project visible to all',
+  DRAFT: 'Create your project proposal',
+  SUBMITTED: 'Submitted for guide review',
+  UNDER_REVIEW: 'Guide is reviewing your project',
+  REJECTED: 'Revisions requested — edit and resubmit',
+  APPROVED: 'Project approved by guide',
+  COMPLETED: 'Project successfully completed',
+  PUBLISHED: 'Project visible on public showcase',
 }
 
 function PrnBadge({ prn }: { prn: string }) {
@@ -261,9 +265,10 @@ export default function MyProjectPage() {
             <h3 className="font-['Sora'] text-base font-semibold text-[#EEF2FF] mb-4">Project Progress</h3>
             <div className="flex flex-col">
               {STATUS_STEPS.map((step, idx) => {
-                const curIdx = STATUS_STEPS.indexOf(project.status as typeof STATUS_STEPS[number])
+                const effectiveStatus = project.status === 'REJECTED' ? 'SUBMITTED' : project.status
+                const curIdx = STATUS_STEPS.indexOf(effectiveStatus as typeof STATUS_STEPS[number])
                 const isCompleted = idx < curIdx
-                const isCurrent = step === project.status
+                const isCurrent = step === effectiveStatus
                 return (
                   <div key={step}>
                     <div className="flex items-start gap-3">

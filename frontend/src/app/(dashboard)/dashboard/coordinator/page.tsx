@@ -43,13 +43,13 @@ const STATUS_COLORS_CLS: Record<string, string> = {
   SUBMITTED: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
   UNDER_REVIEW: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
   REJECTED: 'bg-red-500/20 text-red-400 border-red-500/30',
-  APPROVED: 'bg-green-500/20 text-green-400 border-green-500/30',
-  COMPLETED: 'bg-green-500/20 text-green-400 border-green-500/30',
-  PUBLISHED: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+  APPROVED: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+  COMPLETED: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+  PUBLISHED: 'bg-violet-500/20 text-violet-400 border-violet-500/30',
 }
 const PIE_COLORS: Record<string, string> = {
   DRAFT: '#6B7280', SUBMITTED: '#3B82F6', UNDER_REVIEW: '#F59E0B',
-  REJECTED: '#EF4444', APPROVED: '#10B981', COMPLETED: '#10B981', PUBLISHED: '#8B5CF6',
+  REJECTED: '#EF4444', APPROVED: '#10B981', COMPLETED: '#A855F7', PUBLISHED: '#7C3AED',
 }
 const YEARS: Year[] = ['FY', 'SY', 'TY', 'FINAL']
 
