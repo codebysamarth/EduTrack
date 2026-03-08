@@ -91,16 +91,15 @@ export default function AdminPage() {
     try {
       const [sRes, fRes, dRes, pRes] = await Promise.all([
         api.get('/users?role=STUDENT&limit=1'),
-        api.get('/users?limit=1'),
+        api.get('/users?hasFacultyProfile=true&limit=100'),
         api.get('/departments'),
         api.get('/projects?status=PUBLISHED'),
       ])
       setStudentCount(sRes.data.pagination?.total ?? 0)
       const allUsers: UserData[] = fRes.data.users ?? []
-      const fac = allUsers.filter(u => u.facultyProfile || u.roles.some(r => r !== 'STUDENT'))
-      setAllFaculty(fac)
-      setFacultyCount(fac.filter(u => u.isApproved).length)
-      setPendingFaculty(fac.filter(u => !u.isApproved))
+      setAllFaculty(allUsers)
+      setFacultyCount(allUsers.filter(u => u.isApproved).length)
+      setPendingFaculty(allUsers.filter(u => !u.isApproved))
       setDepartments(Array.isArray(dRes.data) ? dRes.data : [])
       setPublishedCount(Array.isArray(pRes.data) ? pRes.data.length : 0)
     } catch { /* */ }
@@ -193,6 +192,8 @@ export default function AdminPage() {
 
   const handleAssignDeptRole = async () => {
     if (!roleMgmtDept || !assignTarget) return
+    const deptName = roleMgmtDept.name
+    const roleLbl = assignRole.charAt(0) + assignRole.slice(1).toLowerCase()
     setRoleLoading('assign')
     try {
       await api.post('/users/assign-role', {
@@ -201,12 +202,10 @@ export default function AdminPage() {
         departmentId: roleMgmtDept.id,
         year: assignRole === 'COORDINATOR' ? assignYear || undefined : undefined,
       })
-      const dRes = await api.get(`/departments/${roleMgmtDept.id}`)
-      setRoleMgmtDept(dRes.data)
+      setRoleMgmtDept(null)
       setAssignTarget('')
-      setRoleMgmtTab('current')
       await fetchData()
-      toast.success(`${assignRole.charAt(0) + assignRole.slice(1).toLowerCase()} assigned successfully`)
+      toast.success(`${roleLbl} assigned to ${deptName}`)
     } catch {
       toast.error('Failed to assign role')
     }

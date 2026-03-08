@@ -30,6 +30,10 @@ router.get('/', verifyToken, requireRole('ADMIN'), async (req, res, next) => {
       where.roles = { some: { role: { name: req.query.role } } };
     }
 
+    if (req.query.hasFacultyProfile === 'true') {
+      where.facultyProfile = { isNot: null };
+    }
+
     const [users, total] = await Promise.all([
       prisma.user.findMany({
         where,

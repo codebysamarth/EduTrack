@@ -1,0 +1,366 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                    COLLEGE PLATFORM — SEED DATA REFERENCE                   ║
+║                        Password for ALL users: 12345678                      ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+════════════════════════════════════════════════════════════════════════════════
+  ADMIN
+════════════════════════════════════════════════════════════════════════════════
+  Name:     Samarth Pawar
+  Email:    pawarsamarth786@gmail.com
+  Password: 12345678
+
+════════════════════════════════════════════════════════════════════════════════
+  DEPARTMENTS (4)
+════════════════════════════════════════════════════════════════════════════════
+  1. Computer Science & Engineering  (CSE)
+  2. Information Technology           (IT)
+  3. Mechanical Engineering           (ME)
+  4. Electronics & Telecommunication  (ENTC)
+
+════════════════════════════════════════════════════════════════════════════════
+  FACULTY (20 total)
+════════════════════════════════════════════════════════════════════════════════
+
+── CSE (6 Faculty) ──────────────────────────────────────────────────────────
+  Role          Name                     Email                                PRN     EmpID   Designation
+  HOD           Dr. Rajesh Kulkarni      rajesh.kulkarni24@college.edu        FAC001  EMP001  Professor & HOD
+  COORDINATOR   Prof. Sunita Deshpande   sunita.deshpande24@college.edu       FAC002  EMP002  Associate Professor (TY)
+  COORDINATOR   Prof. Mangesh Patil      mangesh.patil24@college.edu          FAC003  EMP003  Associate Professor (FINAL)
+  GUIDE         Prof. Sneha Joshi        sneha.joshi24@college.edu            FAC004  EMP004  Assistant Professor
+  GUIDE         Prof. Amol Bhosale       amol.bhosale24@college.edu           FAC005  EMP005  Assistant Professor
+  GUIDE         Prof. Vaishali More      vaishali.more24@college.edu          FAC006  EMP006  Assistant Professor
+
+── IT (5 Faculty) ───────────────────────────────────────────────────────────
+  Role          Name                     Email                                PRN     EmpID   Designation
+  HOD           Dr. Pramod Sharma        pramod.sharma24@college.edu          FAC007  EMP007  Professor & HOD
+  COORDINATOR   Prof. Kavita Jadhav      kavita.jadhav24@college.edu          FAC008  EMP008  Associate Professor (SY)
+  GUIDE         Prof. Nitin Wagh         nitin.wagh24@college.edu             FAC009  EMP009  Associate Professor
+  GUIDE         Prof. Rashmi Gokhale     rashmi.gokhale24@college.edu         FAC010  EMP010  Assistant Professor
+  GUIDE         Prof. Sudhir Kadam       sudhir.kadam24@college.edu           FAC011  EMP011  Assistant Professor
+
+── ME (4 Faculty) ───────────────────────────────────────────────────────────
+  Role          Name                     Email                                PRN     EmpID   Designation
+  HOD           Dr. Vinayak Sawant       vinayak.sawant24@college.edu         FAC012  EMP012  Professor & HOD
+  COORDINATOR   Prof. Prachi Naik        prachi.naik24@college.edu            FAC013  EMP013  Associate Professor (FINAL)
+  GUIDE         Prof. Hemant Gaikwad     hemant.gaikwad24@college.edu         FAC014  EMP014  Associate Professor
+  GUIDE         Prof. Swati Londhe       swati.londhe24@college.edu           FAC015  EMP015  Assistant Professor
+
+── ENTC (5 Faculty) ─────────────────────────────────────────────────────────
+  Role          Name                     Email                                PRN     EmpID   Designation
+  HOD           Dr. Anil Mhatre          anil.mhatre24@college.edu            FAC016  EMP016  Professor & HOD
+  COORDINATOR   Prof. Deepali Chaudhari  deepali.chaudhari24@college.edu      FAC017  EMP017  Associate Professor (TY)
+  GUIDE         Prof. Sanjay Pawar       sanjay.pawar24@college.edu           FAC018  EMP018  Associate Professor
+  GUIDE         Prof. Madhuri Thakare    madhuri.thakare24@college.edu        FAC019  EMP019  Assistant Professor
+  GUIDE         Prof. Ganesh Shinde      ganesh.shinde24@college.edu          FAC020  EMP020  Assistant Professor
+
+════════════════════════════════════════════════════════════════════════════════
+  STUDENTS (84 total)
+════════════════════════════════════════════════════════════════════════════════
+
+── CSE TY Division A (8 students) ───────────────────────────────────────────
+  Name              Email                            PRN       Enrollment    Div
+  Aarav Patil       aarav.patil24@college.edu        22CS001   EN22CS001     A
+  Sakshi Deshmukh   sakshi.deshmukh24@college.edu    22CS002   EN22CS002     A
+  Vedant Kulkarni   vedant.kulkarni24@college.edu    22CS003   EN22CS003     A
+  Riya Joshi        riya.joshi24@college.edu         22CS004   EN22CS004     A
+  Om Salunkhe       om.salunkhe24@college.edu        22CS005   EN22CS005     A
+  Ananya Bhosale    ananya.bhosale24@college.edu     22CS006   EN22CS006     A
+  Tanmay Shinde     tanmay.shinde24@college.edu      22CS007   EN22CS007     A
+  Pooja Gaikwad     pooja.gaikwad24@college.edu      22CS008   EN22CS008     A
+
+── CSE TY Division B (8 students) ───────────────────────────────────────────
+  Name              Email                            PRN       Enrollment    Div
+  Harsh Pawar       harsh.pawar24@college.edu        22CS009   EN22CS009     B
+  Shruti Kale       shruti.kale24@college.edu        22CS010   EN22CS010     B
+  Atharva Mane      atharva.mane24@college.edu       22CS011   EN22CS011     B
+  Prachi Jadhav     prachi.jadhav24@college.edu      22CS012   EN22CS012     B
+  Tejas Lokhande    tejas.lokhande24@college.edu     22CS013   EN22CS013     B
+  Sakshi Sawant     sakshi.sawant24@college.edu      22CS014   EN22CS014     B
+  Yash Deshpande    yash.deshpande24@college.edu     22CS015   EN22CS015     B
+  Rutuja Thakur     rutuja.thakur24@college.edu      22CS016   EN22CS016     B
+
+── CSE FINAL Division A (8 students) ────────────────────────────────────────
+  Name               Email                            PRN       Enrollment    Div
+  Siddharth More     siddharth.more24@college.edu     21CS001   EN21CS001     A
+  Ankita Chavan      ankita.chavan24@college.edu      21CS002   EN21CS002     A
+  Rohan Kadam        rohan.kadam24@college.edu        21CS003   EN21CS003     A
+  Neha Wagh          neha.wagh24@college.edu          21CS004   EN21CS004     A
+  Pratik Dhere       pratik.dhere24@college.edu       21CS005   EN21CS005     A
+  Vaishnavi Garud    vaishnavi.garud24@college.edu    21CS006   EN21CS006     A
+  Nikhil Sonar       nikhil.sonar24@college.edu       21CS007   EN21CS007     A
+  Snehal Tak         snehal.tak24@college.edu         21CS008   EN21CS008     A
+
+── CSE FINAL Division B (8 students) ────────────────────────────────────────
+  Name               Email                            PRN       Enrollment    Div
+  Omkar Bhor         omkar.bhor24@college.edu         21CS009   EN21CS009     B
+  Gauri Nimbalkar    gauri.nimbalkar24@college.edu    21CS010   EN21CS010     B
+  Aditya Khare       aditya.khare24@college.edu       21CS011   EN21CS011     B
+  Manasi Phadke      manasi.phadke24@college.edu      21CS012   EN21CS012     B
+  Akash Yadav        akash.yadav24@college.edu        21CS013   EN21CS013     B
+  Nupur Raut         nupur.raut24@college.edu         21CS014   EN21CS014     B
+  Jayesh Mahajan     jayesh.mahajan24@college.edu     21CS015   EN21CS015     B
+  Divya Shirke       divya.shirke24@college.edu       21CS016   EN21CS016     B
+
+── IT SY Division A (6 students) ────────────────────────────────────────────
+  Name              Email                            PRN       Enrollment    Div
+  Arjun Naik        arjun.naik24@college.edu         23IT001   EN23IT001     A
+  Komal Phadnis     komal.phadnis24@college.edu      23IT002   EN23IT002     A
+  Rahul Mhaske      rahul.mhaske24@college.edu       23IT003   EN23IT003     A
+  Megha Landge      megha.landge24@college.edu       23IT004   EN23IT004     A
+  Tushar Ingale     tushar.ingale24@college.edu      23IT005   EN23IT005     A
+  Pallavi Kokate    pallavi.kokate24@college.edu     23IT006   EN23IT006     A
+
+── IT SY Division B (6 students) ────────────────────────────────────────────
+  Name               Email                            PRN       Enrollment    Div
+  Suraj Ghodke       suraj.ghodke24@college.edu       23IT007   EN23IT007     B
+  Vrushali Sonawane  vrushali.sonawane24@college.edu  23IT008   EN23IT008     B
+  Gaurav Dabholkar   gaurav.dabholkar24@college.edu   23IT009   EN23IT009     B
+  Nisha Bhandari     nisha.bhandari24@college.edu     23IT010   EN23IT010     B
+  Vishal Dhage       vishal.dhage24@college.edu       23IT011   EN23IT011     B
+  Aditi Tambe        aditi.tambe24@college.edu        23IT012   EN23IT012     B
+
+── IT FINAL Division A (8 students) ─────────────────────────────────────────
+  Name               Email                              PRN       Enrollment    Div
+  Karan Bharambe     karan.bharambe24@college.edu       21IT001   EN21IT001     A
+  Ashwini Gholap     ashwini.gholap24@college.edu       21IT002   EN21IT002     A
+  Prasad Bankar      prasad.bankar24@college.edu        21IT003   EN21IT003     A
+  Sanika Thombre     sanika.thombre24@college.edu       21IT004   EN21IT004     A
+  Aniket Chitre      aniket.chitre24@college.edu        21IT005   EN21IT005     A
+  Priyanka Bhagat    priyanka.bhagat24@college.edu      21IT006   EN21IT006     A
+  Sachin Pol         sachin.pol24@college.edu           21IT007   EN21IT007     A
+  Amruta Deshpande   amruta.deshpande24@college.edu     21IT008   EN21IT008     A
+
+── IT FINAL Division B (4 students) ─────────────────────────────────────────
+  Name                Email                              PRN       Enrollment    Div
+  Prathamesh Kalunge  prathamesh.kalunge24@college.edu   21IT009   EN21IT009     B
+  Suchita Baraskar    suchita.baraskar24@college.edu     21IT010   EN21IT010     B
+  Mayur Shirsat       mayur.shirsat24@college.edu        21IT011   EN21IT011     B
+  Sayli Parate        sayli.parate24@college.edu         21IT012   EN21IT012     B
+
+── ME TY Division A (6 students) ────────────────────────────────────────────
+  Name              Email                            PRN       Enrollment    Div
+  Sandesh Tupe      sandesh.tupe24@college.edu       22ME001   EN22ME001     A
+  Pranali Devkar    pranali.devkar24@college.edu     22ME002   EN22ME002     A
+  Vivek Ghuge       vivek.ghuge24@college.edu        22ME003   EN22ME003     A
+  Rucha Kolhe       rucha.kolhe24@college.edu        22ME004   EN22ME004     A
+  Swapnil Nikam     swapnil.nikam24@college.edu      22ME005   EN22ME005     A
+  Apurva Gawand     apurva.gawand24@college.edu      22ME006   EN22ME006     A
+
+── ME FINAL Division A (4 students) ─────────────────────────────────────────
+  Name              Email                            PRN       Enrollment    Div
+  Mahesh Thombare   mahesh.thombare24@college.edu    21ME001   EN21ME001     A
+  Rupali Divekar    rupali.divekar24@college.edu     21ME002   EN21ME002     A
+  Amey Potdar       amey.potdar24@college.edu        21ME003   EN21ME003     A
+  Shweta Gangurde   shweta.gangurde24@college.edu    21ME004   EN21ME004     A
+
+── ME FINAL Division B (4 students) ─────────────────────────────────────────
+  Name                  Email                                PRN       Enrollment    Div
+  Abhishek Suryawanshi  abhishek.suryawanshi24@college.edu   21ME005   EN21ME005     B
+  Priyanka Donde        priyanka.donde24@college.edu         21ME006   EN21ME006     B
+  Ajinkya Gawade        ajinkya.gawade24@college.edu         21ME007   EN21ME007     B
+  Sayali Mandlik        sayali.mandlik24@college.edu         21ME008   EN21ME008     B
+
+── ENTC TY Division A (6 students) ──────────────────────────────────────────
+  Name              Email                            PRN       Enrollment    Div
+  Chinmay Babar     chinmay.babar24@college.edu      22EC001   EN22EC001     A
+  Tanvi Pardeshi    tanvi.pardeshi24@college.edu     22EC002   EN22EC002     A
+  Sagar Mhatre      sagar.mhatre243@college.edu      22EC003   EN22EC003     A
+  Revati Gosavi     revati.gosavi24@college.edu      22EC004   EN22EC004     A
+  Nikhil Bodke      nikhil.bodke24@college.edu       22EC005   EN22EC005     A
+  Shivani Rathod    shivani.rathod24@college.edu     22EC006   EN22EC006     A
+
+── ENTC FINAL Division A (4 students) ───────────────────────────────────────
+  Name               Email                            PRN       Enrollment    Div
+  Yogesh Kamble      yogesh.kamble24@college.edu      21EC001   EN21EC001     A
+  Bhakti Wable       bhakti.wable24@college.edu       21EC002   EN21EC002     A
+  Hrushikesh Dange   hrushikesh.dange24@college.edu   21EC003   EN21EC003     A
+  Prajakta Bhosle    prajakta.bhosle24@college.edu    21EC004   EN21EC004     A
+
+── ENTC FINAL Division B (4 students) ───────────────────────────────────────
+  Name               Email                            PRN       Enrollment    Div
+  Akshay Desai       akshay.desai243@college.edu      21EC005   EN21EC005     B
+  Ketaki Parkhe      ketaki.parkhe24@college.edu      21EC006   EN21EC006     B
+  Vaibhav Bansode    vaibhav.bansode24@college.edu    21EC007   EN21EC007     B
+  Smita Waghmare     smita.waghmare24@college.edu     21EC008   EN21EC008     B
+
+════════════════════════════════════════════════════════════════════════════════
+  GROUPS & PROJECTS (21 groups)
+════════════════════════════════════════════════════════════════════════════════
+
+── CSE Groups ───────────────────────────────────────────────────────────────
+
+  Group: CSE-TY-A-G1 | Year: TY | Div: A | Sem: 5 | AY: 2025-26
+  Guide: Prof. Sneha Joshi | Coordinator: Prof. Sunita Deshpande
+  Members: Aarav Patil (L), Sakshi Deshmukh, Vedant Kulkarni, Riya Joshi
+  Project: "Smart Attendance System using Face Recognition" → APPROVED
+  Domain: Artificial Intelligence | Tech: Python, OpenCV, TensorFlow, Flask, React, PostgreSQL
+  SDGs: 4, 9
+
+  Group: CSE-TY-A-G2 | Year: TY | Div: A | Sem: 5 | AY: 2025-26
+  Guide: Prof. Amol Bhosale | Coordinator: Prof. Sunita Deshpande
+  Members: Om Salunkhe (L), Ananya Bhosale, Tanmay Shinde, Pooja Gaikwad
+  Project: "E-Waste Management & Recycling Platform" → UNDER_REVIEW
+  Domain: Web Development | Tech: Next.js, Express.js, PostgreSQL, Prisma, Tailwind CSS
+  SDGs: 12, 13, 11
+
+  Group: CSE-TY-B-G1 | Year: TY | Div: B | Sem: 5 | AY: 2025-26
+  Guide: Prof. Vaishali More | Coordinator: Prof. Sunita Deshpande
+  Members: Harsh Pawar (L), Shruti Kale, Atharva Mane, Prachi Jadhav
+  Project: "Video-based Sign Language Translator" → SUBMITTED
+  Domain: Machine Learning | Tech: Python, MediaPipe, TensorFlow, React Native
+  SDGs: 3, 4, 10
+
+  Group: CSE-TY-B-G2 | Year: TY | Div: B | Sem: 5 | AY: 2025-26
+  Guide: Prof. Sneha Joshi | Coordinator: Prof. Sunita Deshpande
+  Members: Tejas Lokhande (L), Sakshi Sawant, Yash Deshpande, Rutuja Thakur
+  Project: "Decentralized Document Verification using Blockchain" → DRAFT
+  Domain: Blockchain | Tech: Solidity, Hardhat, React, Node.js, IPFS, Ethers.js
+  SDGs: 4, 16, 9
+
+  Group: CSE-FIN-A-G1 | Year: FINAL | Div: A | Sem: 7 | AY: 2025-26
+  Guide: Prof. Amol Bhosale | Coordinator: Prof. Mangesh Patil
+  Members: Siddharth More (L), Ankita Chavan, Rohan Kadam, Neha Wagh
+  Project: "Multi-Agent AI Research Assistant" → PUBLISHED ✦
+  Domain: Artificial Intelligence | Tech: Python, LangGraph, LangChain, FastAPI, React, ChromaDB
+  SDGs: 4, 9, 17 | GitHub ✓ | Video ✓
+
+  Group: CSE-FIN-A-G2 | Year: FINAL | Div: A | Sem: 7 | AY: 2025-26
+  Guide: Prof. Vaishali More | Coordinator: Prof. Mangesh Patil
+  Members: Pratik Dhere (L), Vaishnavi Garud, Nikhil Sonar, Snehal Tak
+  Project: "College ERP with AI-Powered Analytics" → COMPLETED
+  Domain: Full Stack Development | Tech: Next.js, Node.js, PostgreSQL, Prisma, TensorFlow.js, Chart.js
+  SDGs: 4, 9 | GitHub ✓
+
+  Group: CSE-FIN-B-G1 | Year: FINAL | Div: B | Sem: 7 | AY: 2025-26
+  Guide: Prof. Sneha Joshi | Coordinator: Prof. Mangesh Patil
+  Members: Omkar Bhor (L), Gauri Nimbalkar, Aditya Khare, Manasi Phadke
+  Project: "Agri-Connect: Farmer-to-Consumer Marketplace" → APPROVED
+  Domain: Mobile Development | Tech: Flutter, Dart, Firebase, Node.js, Razorpay API, Google Maps
+  SDGs: 1, 2, 8, 12 | GitHub ✓
+
+  Group: CSE-FIN-B-G2 | Year: FINAL | Div: B | Sem: 7 | AY: 2025-26
+  Guide: Prof. Amol Bhosale | Coordinator: Prof. Mangesh Patil
+  Members: Akash Yadav (L), Nupur Raut, Jayesh Mahajan, Divya Shirke
+  Project: "MedSecure: Healthcare Data on Blockchain" → SUBMITTED
+  Domain: Blockchain | Tech: Hyperledger Fabric, React, Node.js, MongoDB, Docker
+  SDGs: 3, 9, 16
+
+── IT Groups ────────────────────────────────────────────────────────────────
+
+  Group: IT-SY-A-G1 | Year: SY | Div: A | Sem: 3 | AY: 2025-26
+  Guide: Prof. Nitin Wagh | Coordinator: Prof. Kavita Jadhav
+  Members: Arjun Naik (L), Komal Phadnis, Rahul Mhaske
+  Project: "Campus Marketplace for Students" → SUBMITTED
+  Domain: Mobile Development | Tech: Flutter, Firebase, Dart, Cloud Functions
+  SDGs: 8, 12
+
+  Group: IT-SY-A-G2 | Year: SY | Div: A | Sem: 3 | AY: 2025-26
+  Guide: Prof. Rashmi Gokhale | Coordinator: Prof. Kavita Jadhav
+  Members: Megha Landge (L), Tushar Ingale, Pallavi Kokate
+  Project: "Mental Health Chatbot for Students" → DRAFT
+  Domain: Artificial Intelligence | Tech: Python, Rasa, React, PostgreSQL, Twilio
+  SDGs: 3, 4
+
+  Group: IT-SY-B-G1 | Year: SY | Div: B | Sem: 3 | AY: 2025-26
+  Guide: Prof. Sudhir Kadam | Coordinator: Prof. Kavita Jadhav
+  Members: Suraj Ghodke (L), Vrushali Sonawane, Gaurav Dabholkar
+  Project: "Smart Library Management with RFID" → UNDER_REVIEW
+  Domain: IoT | Tech: Arduino, RFID, Node.js, React, MySQL
+  SDGs: 4, 9
+
+  Group: IT-SY-B-G2 | Year: SY | Div: B | Sem: 3 | AY: 2025-26
+  Guide: Prof. Nitin Wagh | Coordinator: Prof. Kavita Jadhav
+  Members: Nisha Bhandari (L), Vishal Dhage, Aditi Tambe
+  Project: "Automated MCQ Generator from Notes" → DRAFT
+  Domain: Natural Language Processing | Tech: Python, spaCy, Transformers, Flask, React
+  SDGs: 4
+
+  Group: IT-FIN-A-G1 | Year: FINAL | Div: A | Sem: 7 | AY: 2025-26
+  Guide: Prof. Rashmi Gokhale | Coordinator: —
+  Members: Karan Bharambe (L), Ashwini Gholap, Prasad Bankar, Sanika Thombre
+  Project: "IoT Smart Campus Energy Monitor" → PUBLISHED ✦
+  Domain: Internet of Things | Tech: ESP32, MQTT, InfluxDB, Grafana, Python, TensorFlow Lite
+  SDGs: 7, 9, 11, 13 | GitHub ✓ | Video ✓
+
+  Group: IT-FIN-A-G2 | Year: FINAL | Div: A | Sem: 7 | AY: 2025-26
+  Guide: Prof. Sudhir Kadam | Coordinator: —
+  Members: Aniket Chitre (L), Priyanka Bhagat, Sachin Pol, Amruta Deshpande
+  Project: "Natural Language to SQL Query Generator" → APPROVED
+  Domain: Machine Learning | Tech: Python, OpenAI API, LangChain, FastAPI, React, PostgreSQL
+  SDGs: 9, 4 | GitHub ✓
+
+  Group: IT-FIN-B-G1 | Year: FINAL | Div: B | Sem: 7 | AY: 2025-26
+  Guide: Prof. Nitin Wagh | Coordinator: —
+  Members: Prathamesh Kalunge (L), Suchita Baraskar, Mayur Shirsat, Sayli Parate
+  Project: "Women Safety App with Real-time Tracking" → COMPLETED
+  Domain: Mobile Development | Tech: React Native, Node.js, Socket.IO, Google Maps API, Twilio
+  SDGs: 5, 11, 16 | GitHub ✓
+
+── ME Groups ────────────────────────────────────────────────────────────────
+
+  Group: ME-FIN-A-G1 | Year: FINAL | Div: A | Sem: 7 | AY: 2025-26
+  Guide: Prof. Hemant Gaikwad | Coordinator: Prof. Prachi Naik
+  Members: Mahesh Thombare (L), Rupali Divekar, Amey Potdar, Shweta Gangurde
+  Project: "Automated Solar Panel Cleaning Robot" → PUBLISHED ✦
+  Domain: Robotics & Automation | Tech: Arduino Mega, Raspberry Pi, Python, ROS, SolidWorks
+  SDGs: 7, 9, 13 | GitHub ✓ | Video ✓
+
+  Group: ME-FIN-B-G1 | Year: FINAL | Div: B | Sem: 7 | AY: 2025-26
+  Guide: Prof. Swati Londhe | Coordinator: Prof. Prachi Naik
+  Members: Abhishek Suryawanshi (L), Priyanka Donde, Ajinkya Gawade, Sayali Mandlik
+  Project: "Industrial Waste Heat Recovery System" → UNDER_REVIEW
+  Domain: Renewable Energy | Tech: MATLAB Simulink, SolidWorks, Arduino, LabVIEW
+  SDGs: 7, 9, 12, 13
+
+── ENTC Groups ──────────────────────────────────────────────────────────────
+
+  Group: ENTC-TY-A-G1 | Year: TY | Div: A | Sem: 5 | AY: 2025-26
+  Guide: Prof. Sanjay Pawar | Coordinator: Prof. Deepali Chaudhari
+  Members: Chinmay Babar (L), Tanvi Pardeshi, Sagar Mhatre, Revati Gosavi
+  Project: "PCB Defect Detection using Computer Vision" → APPROVED
+  Domain: Computer Vision | Tech: Python, OpenCV, YOLOv8, Raspberry Pi 4, Flask
+  SDGs: 9, 12 | GitHub ✓
+
+  Group: ENTC-FIN-A-G1 | Year: FINAL | Div: A | Sem: 7 | AY: 2025-26
+  Guide: Prof. Madhuri Thakare | Coordinator: —
+  Members: Yogesh Kamble (L), Bhakti Wable, Hrushikesh Dange, Prajakta Bhosle
+  Project: "LoRa-based Environmental Monitoring Network" → PUBLISHED ✦
+  Domain: Internet of Things | Tech: LoRa SX1276, STM32, The Things Network, InfluxDB, Grafana
+  SDGs: 3, 11, 13 | GitHub ✓ | Video ✓
+
+  Group: ENTC-FIN-B-G1 | Year: FINAL | Div: B | Sem: 7 | AY: 2025-26
+  Guide: Prof. Ganesh Shinde | Coordinator: —
+  Members: Akshay Desai (L), Ketaki Parkhe, Vaibhav Bansode, Smita Waghmare
+  Project: "Voice-Controlled Home Automation System" → SUBMITTED
+  Domain: Embedded Systems | Tech: ESP32, Vosk (offline ASR), Relay Module, Flutter, MQTT
+  SDGs: 7, 9, 11
+
+════════════════════════════════════════════════════════════════════════════════
+  PROJECT STATUS SUMMARY
+════════════════════════════════════════════════════════════════════════════════
+  PUBLISHED:    4  (AI Research Assistant, IoT Energy Monitor, Solar Robot, LoRa Monitor)
+  COMPLETED:    2  (College ERP, Women Safety App)
+  APPROVED:     4  (Smart Attendance, Agri-Connect, NL2SQL, PCB Defect Detection)
+  UNDER_REVIEW: 3  (E-Waste, Smart Library, Waste Heat Recovery)
+  SUBMITTED:    4  (Sign Language, MedSecure, Campus Marketplace, Voice Home Auto)
+  DRAFT:        4  (Blockchain Doc Verify, Mental Health Bot, MCQ Generator, ...)
+
+════════════════════════════════════════════════════════════════════════════════
+  HOW TO SEED
+════════════════════════════════════════════════════════════════════════════════
+  cd backend
+  npx prisma db seed
+
+  Or reset & re-seed (WARNING: deletes all existing data):
+  npx prisma migrate reset
+
+════════════════════════════════════════════════════════════════════════════════
+  NOTES
+════════════════════════════════════════════════════════════════════════════════
+  • Email pattern: firstname.lastname24@college.edu (243 for duplicates)
+  • Password for ALL users: 12345678
+  • (L) = Group Leader
+  • ✦ = Published to showcase
+  • Reviews are auto-created for APPROVED/COMPLETED/PUBLISHED/UNDER_REVIEW projects
+  • Audit logs created for HOD assignments
