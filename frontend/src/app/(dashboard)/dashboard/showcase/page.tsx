@@ -37,22 +37,16 @@ interface ProjectData {
   researchPaperLink?: string
   patentLink?: string
   publishedAt?: string
+  department?: { name: string; code: string } | null
   group?: {
     name: string
     year: string
     division: string
-    department?: { name: string; code: string }
     guide?: { name: string }
     members?: { student: { name: string; prnNo?: string }; isLeader: boolean }[]
   }
 }
 
-const DOMAINS = [
-  'Web Development', 'Internet of Things (IoT)', 'Artificial Intelligence / ML',
-  'Blockchain & Web3', 'Mobile App Development', 'Embedded Systems',
-  'Cybersecurity', 'Data Science & Analytics', 'Robotics & Automation',
-  'Cloud Computing', 'Augmented / Virtual Reality',
-]
 const YEARS = ['FY', 'SY', 'TY', 'FINAL']
 const SDG_GOALS = Array.from({ length: 17 }, (_, i) => i + 1)
 
@@ -85,8 +79,14 @@ export default function ShowcasePage() {
   const departments = useMemo(() => {
     const set = new Set<string>()
     projects.forEach(p => {
-      if (p.group?.department?.code) set.add(p.group.department.code)
+      if (p.department?.code) set.add(p.department.code)
     })
+    return [...set].sort()
+  }, [projects])
+
+  const domains = useMemo(() => {
+    const set = new Set<string>()
+    projects.forEach(p => { if (p.domain) set.add(p.domain) })
     return [...set].sort()
   }, [projects])
 
@@ -101,7 +101,7 @@ export default function ShowcasePage() {
           p.group?.members?.some(m => m.student.name.toLowerCase().includes(q))
         if (!match) return false
       }
-      if (filterDept && p.group?.department?.code !== filterDept) return false
+      if (filterDept && p.department?.code !== filterDept) return false
       if (filterDomain && p.domain !== filterDomain) return false
       if (filterYear && p.group?.year !== filterYear) return false
       if (filterSdg && !p.sdgGoals?.includes(parseInt(filterSdg))) return false
@@ -177,7 +177,7 @@ export default function ShowcasePage() {
                 <select value={filterDomain} onChange={e => setFilterDomain(e.target.value)}
                   className="px-3 py-2 bg-[#1A2540] border border-[#2A3A5C] rounded-xl text-sm text-[#EEF2FF] focus:border-amber-500 focus:outline-none">
                   <option value="">All Domains</option>
-                  {DOMAINS.map(d => <option key={d} value={d}>{d}</option>)}
+                  {domains.map(d => <option key={d} value={d}>{d}</option>)}
                 </select>
                 <select value={filterYear} onChange={e => setFilterYear(e.target.value)}
                   className="px-3 py-2 bg-[#1A2540] border border-[#2A3A5C] rounded-xl text-sm text-[#EEF2FF] focus:border-amber-500 focus:outline-none">
@@ -247,10 +247,10 @@ export default function ShowcasePage() {
               {/* Group info */}
               <div className="flex items-center gap-2 text-xs text-[#4A5B7A] mt-auto pt-3 border-t border-[#2A3A5C]/50">
                 {p.group?.name && <span>{p.group.name}</span>}
-                {p.group?.department?.code && (
+                {p.department?.code && (
                   <>
                     <span>·</span>
-                    <span className="font-mono">{p.group.department.code}</span>
+                    <span className="font-mono">{p.department.code}</span>
                   </>
                 )}
                 {p.group?.year && (
@@ -330,7 +330,7 @@ export default function ShowcasePage() {
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-sm font-semibold text-[#EEF2FF]">{selected.group.name}</p>
                     <div className="flex items-center gap-2 text-xs text-[#4A5B7A]">
-                      {selected.group.department?.code && <span className="font-mono">{selected.group.department.code}</span>}
+                      {selected.department?.code && <span className="font-mono">{selected.department.code}</span>}
                       <span>·</span>
                       <span>{selected.group.year} / {selected.group.division}</span>
                     </div>
