@@ -21,6 +21,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { api } from '@/lib/api'
+import { toast } from 'sonner'
 
 function PrnBadge({ prn }: { prn: string }) {
   return (
@@ -113,7 +114,10 @@ export default function AdminPage() {
     try {
       await api.patch(`/users/${userId}/approve`, { isApproved: true })
       await fetchData()
-    } catch { /* */ }
+      toast.success('Faculty approved')
+    } catch {
+      toast.error('Failed to approve faculty')
+    }
     setActionLoading(null)
   }
 
@@ -122,7 +126,10 @@ export default function AdminPage() {
     try {
       await api.patch(`/users/${userId}/approve`, { isApproved: false })
       await fetchData()
-    } catch { /* */ }
+      toast.success('Faculty rejected')
+    } catch {
+      toast.error('Failed to reject faculty')
+    }
     setActionLoading(null)
   }
 
@@ -133,7 +140,10 @@ export default function AdminPage() {
       setShowCreateDept(false)
       setDeptForm({ name: '', code: '' })
       await fetchData()
-    } catch { /* */ }
+      toast.success('Department created')
+    } catch {
+      toast.error('Failed to create department')
+    }
     setDeptLoading(false)
   }
 
@@ -145,7 +155,10 @@ export default function AdminPage() {
       setAssignHodDept(null)
       setHodUserId('')
       await fetchData()
-    } catch { /* */ }
+      toast.success('HOD assigned successfully')
+    } catch {
+      toast.error('Failed to assign HOD')
+    }
     setActionLoading(null)
   }
 
@@ -171,7 +184,10 @@ export default function AdminPage() {
       const dRes = await api.get(`/departments/${roleMgmtDept.id}`)
       setRoleMgmtDept(dRes.data)
       await fetchData()
-    } catch { /* */ }
+      toast.success(`${roleName.charAt(0) + roleName.slice(1).toLowerCase()} role removed`)
+    } catch {
+      toast.error('Failed to remove role')
+    }
     setRoleLoading(null)
   }
 
@@ -188,8 +204,12 @@ export default function AdminPage() {
       const dRes = await api.get(`/departments/${roleMgmtDept.id}`)
       setRoleMgmtDept(dRes.data)
       setAssignTarget('')
+      setRoleMgmtTab('current')
       await fetchData()
-    } catch { /* */ }
+      toast.success(`${assignRole.charAt(0) + assignRole.slice(1).toLowerCase()} assigned successfully`)
+    } catch {
+      toast.error('Failed to assign role')
+    }
     setRoleLoading(null)
   }
 
