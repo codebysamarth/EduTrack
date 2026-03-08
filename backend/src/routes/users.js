@@ -147,10 +147,16 @@ router.get('/students', verifyToken, requireRole('COORDINATOR', 'HOD', 'ADMIN'),
       name: sp.user.name,
       email: sp.user.email,
       prnNo: sp.prnNo,
-      enrollmentNo: sp.enrollmentNo,
-      year: sp.year,
-      division: sp.division,
-      group: memberMap[sp.userId] || null,
+      isApproved: sp.user.isApproved,
+      roles: ['STUDENT'],
+      studentProfile: {
+        enrollmentNo: sp.enrollmentNo,
+        year: sp.year,
+        division: sp.division,
+        departmentId: sp.departmentId,
+        department: sp.department ? { id: sp.department.id, name: sp.department.name, code: sp.department.code } : null,
+        group: memberMap[sp.userId] || null,
+      },
     }));
 
     return res.json(students);

@@ -275,8 +275,16 @@ router.get('/me', verifyToken, async (req, res, next) => {
       where: { id: req.user.userId },
       include: {
         roles: { include: { role: true, department: true } },
-        studentProfile: true,
-        facultyProfile: true,
+        studentProfile: {
+          include: {
+            department: { select: { id: true, name: true, code: true } },
+          },
+        },
+        facultyProfile: {
+          include: {
+            department: { select: { id: true, name: true, code: true } },
+          },
+        },
       },
     });
 

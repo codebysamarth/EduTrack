@@ -26,9 +26,9 @@ router.post('/', verifyToken, requireRole('ADMIN'), async (req, res, next) => {
 });
 
 // ═══════════════════════════════════════════════════════
-// GET /  — List all departments with counts
+// GET /  — List all departments with counts (public — used in register form)
 // ═══════════════════════════════════════════════════════
-router.get('/', verifyToken, async (req, res, next) => {
+router.get('/', async (req, res, next) => {
   try {
     const departments = await prisma.department.findMany({
       include: {
