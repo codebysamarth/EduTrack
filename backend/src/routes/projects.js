@@ -262,6 +262,8 @@ router.get('/', verifyToken, async (req, res, next) => {
             name: true,
             year: true,
             division: true,
+            departmentId: true,
+            department: { select: { id: true, name: true, code: true } },
             guide: { include: { facultyProfile: true } },
             _count: { select: { members: true } },
           },
@@ -292,6 +294,8 @@ router.get('/', verifyToken, async (req, res, next) => {
         name: p.group.name,
         year: p.group.year,
         division: p.group.division,
+        departmentId: p.group.departmentId,
+        department: p.group.department || null,
       },
       guide: p.group.guide
         ? { name: p.group.guide.name, prnNo: p.group.guide.facultyProfile?.prnNo || null }

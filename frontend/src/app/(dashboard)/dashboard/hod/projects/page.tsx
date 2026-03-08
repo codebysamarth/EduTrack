@@ -45,7 +45,7 @@ interface ProjectDetail {
   group?: {
     id: string; name: string; year: string; division: string
     department?: { id: string; name: string } | null
-    members?: { id: string; user: { id: string; name: string; prnNo?: string }; isLeader: boolean }[]
+    members?: { id: string; student: { id: string; name: string; prnNo?: string }; isLeader: boolean }[]
   } | null
   guide?: { id: string; name: string; prnNo?: string } | null
   reviews?: { id: string; grade?: string; marks?: number; comment?: string; createdAt: string }[]
@@ -55,7 +55,7 @@ interface DeptData { id: string; name: string; code: string }
 
 type Year = 'FY' | 'SY' | 'TY' | 'FINAL'
 const YEARS: Year[] = ['FY', 'SY', 'TY', 'FINAL']
-const STATUSES = ['IN_PROGRESS', 'SUBMITTED', 'REVIEWED', 'APPROVED', 'PUBLISHED'] as const
+const STATUSES = ['DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'COMPLETED', 'PUBLISHED'] as const
 const PAGE_SIZE = 20
 
 export default function HodProjectsPage() {
@@ -361,11 +361,11 @@ export default function HodProjectsPage() {
                       <div key={m.id} className="p-3 bg-[#1A2540] rounded-xl">
                         <div className="flex items-center gap-2">
                           <div className="h-7 w-7 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-400 text-[10px] font-semibold shrink-0">
-                            {m.user.name.charAt(0)}
+                            {m.student.name.charAt(0)}
                           </div>
                           <div className="min-w-0">
-                            <span className="text-xs text-[#EEF2FF] block truncate">{m.user.name}</span>
-                            {m.user.prnNo && <PrnBadge prn={m.user.prnNo} />}
+                            <span className="text-xs text-[#EEF2FF] block truncate">{m.student.name}</span>
+                            {m.student.prnNo && <PrnBadge prn={m.student.prnNo} />}
                           </div>
                         </div>
                         {m.isLeader && (

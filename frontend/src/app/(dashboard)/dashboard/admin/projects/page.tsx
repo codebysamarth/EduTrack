@@ -52,7 +52,7 @@ interface ProjectDetail {
 
 interface DeptData { id: string; name: string; code: string }
 
-const STATUSES = ['IN_PROGRESS', 'SUBMITTED', 'REVIEWED', 'PUBLISHED'] as const
+const STATUSES = ['DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'COMPLETED', 'PUBLISHED'] as const
 const PAGE_SIZE = 20
 
 export default function AdminProjectsPage() {
@@ -144,10 +144,12 @@ export default function AdminProjectsPage() {
 
   const statusColor = (status: string) => {
     switch (status) {
-      case 'PUBLISHED': return 'bg-green-500/10 text-green-400 border-green-500/20'
-      case 'IN_PROGRESS': return 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-      case 'SUBMITTED': return 'bg-purple-500/10 text-purple-400 border-purple-500/20'
-      case 'REVIEWED': return 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+      case 'PUBLISHED': return 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+      case 'COMPLETED': return 'bg-green-500/10 text-green-400 border-green-500/20'
+      case 'APPROVED': return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+      case 'UNDER_REVIEW': return 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+      case 'SUBMITTED': return 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+      case 'DRAFT': return 'bg-[#1A2540] text-[#7A8BAF] border-[#2A3A5C]'
       default: return 'bg-[#1A2540] text-[#7A8BAF] border-[#2A3A5C]'
     }
   }

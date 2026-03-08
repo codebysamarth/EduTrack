@@ -133,6 +133,7 @@ router.get('/students', verifyToken, requireRole('COORDINATOR', 'HOD', 'ADMIN'),
         group: {
           include: {
             guide: true,
+            project: { select: { id: true, title: true, status: true } },
           },
         },
       },
@@ -143,6 +144,7 @@ router.get('/students', verifyToken, requireRole('COORDINATOR', 'HOD', 'ADMIN'),
         id: gm.group.id,
         name: gm.group.name,
         guideName: gm.group.guide?.name || null,
+        project: gm.group.project ? { title: gm.group.project.title, status: gm.group.project.status } : null,
       };
     }
 
