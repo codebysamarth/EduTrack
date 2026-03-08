@@ -48,7 +48,7 @@ interface GroupDetail {
   academicYear?: string; semester?: number
   guide?: { id: string; name: string; prnNo?: string } | null
   coordinator?: { id: string; name: string } | null
-  members?: { id: string; user: { id: string; name: string; prnNo?: string; email: string }; isLeader: boolean }[]
+  members?: { id: string; student: { id: string; name: string; prnNo?: string; email: string }; isLeader: boolean }[]
   project?: { id: string; title: string; status: string; domain?: string } | null
   department?: { id: string; name: string } | null
 }
@@ -233,7 +233,7 @@ export default function AdminGroupsPage() {
     )
   }
 
-  const existingMemberIds = new Set(editGroup?.members?.map(m => m.user.id) ?? [])
+  const existingMemberIds = new Set(editGroup?.members?.map(m => m.student.id) ?? [])
 
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="space-y-6">
@@ -396,13 +396,13 @@ export default function AdminGroupsPage() {
                     {(viewGroup.members ?? []).map(m => (
                       <div key={m.id} className="flex items-center justify-between p-3 bg-[#1A2540] rounded-xl">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm text-[#EEF2FF]">{m.user.name}</span>
-                          {m.user.prnNo && <PrnBadge prn={m.user.prnNo} />}
+                          <span className="text-sm text-[#EEF2FF]">{m.student.name}</span>
+                          {m.student.prnNo && <PrnBadge prn={m.student.prnNo} />}
                           {m.isLeader && (
                             <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">Leader</span>
                           )}
                         </div>
-                        <span className="text-[10px] text-[#4A5B7A]">{m.user.email}</span>
+                        <span className="text-[10px] text-[#4A5B7A]">{m.student.email}</span>
                       </div>
                     ))}
                   </div>
@@ -443,14 +443,14 @@ export default function AdminGroupsPage() {
                   {(editGroup.members ?? []).map(m => (
                     <div key={m.id} className="flex items-center justify-between p-3 bg-[#1A2540] rounded-xl">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm text-[#EEF2FF]">{m.user.name}</span>
-                        {m.user.prnNo && <PrnBadge prn={m.user.prnNo} />}
+                        <span className="text-sm text-[#EEF2FF]">{m.student.name}</span>
+                        {m.student.prnNo && <PrnBadge prn={m.student.prnNo} />}
                         {m.isLeader && <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">Leader</span>}
                       </div>
                       <button onClick={() => setRemoveStudentIds(prev =>
-                        prev.includes(m.user.id) ? prev.filter(x => x !== m.user.id) : [...prev, m.user.id]
-                      )} className={`text-xs flex items-center gap-1 transition-colors ${removeStudentIds.includes(m.user.id) ? 'text-red-400' : 'text-[#4A5B7A] hover:text-red-400'}`}>
-                        <UserMinus size={10} /> {removeStudentIds.includes(m.user.id) ? 'Will remove' : 'Remove'}
+                        prev.includes(m.student.id) ? prev.filter(x => x !== m.student.id) : [...prev, m.student.id]
+                      )} className={`text-xs flex items-center gap-1 transition-colors ${removeStudentIds.includes(m.student.id) ? 'text-red-400' : 'text-[#4A5B7A] hover:text-red-400'}`}>
+                        <UserMinus size={10} /> {removeStudentIds.includes(m.student.id) ? 'Will remove' : 'Remove'}
                       </button>
                     </div>
                   ))}

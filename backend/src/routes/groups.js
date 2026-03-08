@@ -186,6 +186,8 @@ router.get('/', verifyToken, async (req, res, next) => {
       division: g.division,
       academicYear: g.academicYear,
       semester: g.semester,
+      departmentId: g.departmentId,
+      department: g.department,
       guide: g.guide
         ? { id: g.guide.id, name: g.guide.name, prnNo: g.guide.facultyProfile?.prnNo || null }
         : null,
