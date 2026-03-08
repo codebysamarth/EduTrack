@@ -33,10 +33,26 @@ router.get('/', async (req, res, next) => {
     const departments = await prisma.department.findMany({
       include: {
         _count: { select: { groups: true, studentProfiles: true } },
+        userRoles: {
+          where: { role: { name: 'HOD' } },
+          include: { user: { include: { facultyProfile: true } } },
+          take: 1,
+        },
       },
       orderBy: { name: 'asc' },
     });
-    return res.json(departments);
+
+    const result = departments.map(({ userRoles, ...dept }) => {
+      const hodRole = userRoles[0];
+      return {
+        ...dept,
+        hod: hodRole
+          ? { id: hodRole.user.id, name: hodRole.user.name, prnNo: hodRole.user.facultyProfile?.prnNo || null }
+          : null,
+      };
+    });
+
+    return res.json(result);
   } catch (err) {
     next(err);
   }
@@ -143,6 +159,12 @@ router.patch('/:id/assign-hod', verifyToken, requireRole('ADMIN'), async (req, r
       where: { userId_roleId_departmentId: { userId, roleId: role.id, departmentId: id } },
       update: {},
       create: { userId, roleId: role.id, departmentId: id },
+    });
+
+    // Keep facultyProfile.departmentId in sync with the HOD assignment
+    await prisma.facultyProfile.update({
+      where: { userId },
+      data: { departmentId: id },
     });
 
     await prisma.auditLog.create({

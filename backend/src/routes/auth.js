@@ -257,6 +257,8 @@ router.post(
           roles,
           departmentId,
           isApproved: fullUser.isApproved,
+          studentProfile: fullUser.studentProfile || null,
+          facultyProfile: fullUser.facultyProfile || null,
         },
         redirectTo: getRedirectPath(roles),
       });
