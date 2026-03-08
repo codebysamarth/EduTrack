@@ -1,0 +1,222 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── ENUMS ───────────────────────────────────────────────
+
+enum RoleName {
+  STUDENT
+  GUIDE
+  COORDINATOR
+  HOD
+  ADMIN
+}
+
+enum Year {
+  FY
+  SY
+  TY
+  FINAL
+}
+
+enum ProjectStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  REJECTED
+  APPROVED
+  COMPLETED
+  PUBLISHED
+}
+
+enum FF180Status {
+  PENDING
+  SUBMITTED
+  APPROVED
+}
+
+// ─── MODELS ──────────────────────────────────────────────
+
+model User {
+  id         String   @id @default(cuid())
+  email      String   @unique
+  password   String
+  name       String
+  phone      String?
+  isApproved Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  roles             UserRole[]
+  studentProfile    StudentProfile?
+  facultyProfile    FacultyProfile?
+  guidedGroups      Group[]          @relation("GuideGroups")
+  coordinatedGroups Group[]          @relation("CoordinatorGroups")
+  reviews           ProjectReview[]
+  auditLogs         AuditLog[]
+  groupMembers      GroupMember[]
+}
+
+model Role {
+  id   String   @id @default(cuid())
+  name RoleName @unique
+
+  userRoles UserRole[]
+}
+
+model UserRole {
+  id           String  @id @default(cuid())
+  userId       String
+  roleId       String
+  departmentId String?
+  year         Year?
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       Role        @relation(fields: [roleId], references: [id])
+  department Department? @relation(fields: [departmentId], references: [id])
+
+  @@unique([userId, roleId, departmentId])
+}
+
+model Department {
+  id        String   @id @default(cuid())
+  name      String
+  code      String   @unique
+  createdAt DateTime @default(now())
+
+  userRoles       UserRole[]
+  studentProfiles StudentProfile[]
+  facultyProfiles FacultyProfile[]
+  groups          Group[]
+  projects        Project[]
+}
+
+model StudentProfile {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  prnNo        String   @unique
+  enrollmentNo String   @unique
+  departmentId String
+  year         Year
+  division     String
+  createdAt    DateTime @default(now())
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department Department @relation(fields: [departmentId], references: [id])
+
+  @@index([departmentId, year])
+  @@index([prnNo])
+}
+
+model FacultyProfile {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  prnNo        String   @unique
+  employeeId   String?  @unique
+  departmentId String
+  designation  String
+  createdAt    DateTime @default(now())
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department Department @relation(fields: [departmentId], references: [id])
+
+  @@index([prnNo])
+  @@index([departmentId])
+}
+
+model Group {
+  id            String   @id @default(cuid())
+  name          String
+  departmentId  String
+  year          Year
+  division      String
+  guideId       String?
+  coordinatorId String?
+  academicYear  String
+  semester      Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  department  Department   @relation(fields: [departmentId], references: [id])
+  guide       User?        @relation("GuideGroups", fields: [guideId], references: [id])
+  coordinator User?        @relation("CoordinatorGroups", fields: [coordinatorId], references: [id])
+  members     GroupMember[]
+  project     Project?
+
+  @@index([departmentId, year])
+  @@index([guideId])
+}
+
+model GroupMember {
+  id        String   @id @default(cuid())
+  groupId   String
+  studentId String
+  isLeader  Boolean  @default(false)
+  joinedAt  DateTime @default(now())
+
+  group   Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  student User  @relation(fields: [studentId], references: [id])
+
+  @@unique([groupId, studentId])
+}
+
+model Project {
+  id                String        @id @default(cuid())
+  groupId           String        @unique
+  departmentId      String
+  title             String
+  abstract          String?
+  sdgGoals          Int[]
+  domain            String?
+  techStack         String?
+  githubLink        String?
+  videoLink         String?
+  driveLink         String?
+  researchPaperLink String?
+  patentLink        String?
+  ff180Status       FF180Status   @default(PENDING)
+  status            ProjectStatus @default(DRAFT)
+  isPublished       Boolean       @default(false)
+  publishedAt       DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  group      Group           @relation(fields: [groupId], references: [id])
+  department Department      @relation(fields: [departmentId], references: [id])
+  reviews    ProjectReview[]
+
+  @@index([departmentId, status])
+  @@index([isPublished])
+}
+
+model ProjectReview {
+  id              String   @id @default(cuid())
+  projectId       String
+  reviewerId      String
+  comment         String
+  isApproved      Boolean
+  rejectionReason String?
+  createdAt       DateTime @default(now())
+
+  project  Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  reviewer User    @relation(fields: [reviewerId], references: [id])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, entityType])
+}
