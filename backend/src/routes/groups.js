@@ -170,7 +170,7 @@ router.get('/', verifyToken, async (req, res, next) => {
     const groups = await prisma.group.findMany({
       where: whereClause,
       include: {
-        department: { select: { name: true, code: true } },
+        department: { select: { id: true, name: true, code: true } },
         guide: { include: { facultyProfile: true } },
         coordinator: { include: { facultyProfile: true } },
         _count: { select: { members: true } },
