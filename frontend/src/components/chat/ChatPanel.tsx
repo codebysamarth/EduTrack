@@ -2,11 +2,11 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Send, Loader2 } from 'lucide-react'
+import { X, Send, Loader2, Trash2, History, ChevronLeft } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { aiApi } from '@/lib/aiApi'
-import type { RoleName } from '@/types'
+import type { RoleName, User } from '@/types'
 
 /* ─── Colour map ──────────────────────────────────────── */
 const ROLE_COLORS: Record<RoleName, string> = {
@@ -44,6 +44,7 @@ interface ChatPanelProps {
   isOpen: boolean
   onClose: () => void
   userRole: string
+  user: User | null
 }
 
 /* ─── Helpers ─────────────────────────────────────────── */
@@ -73,9 +74,41 @@ function renderBold(text: string) {
   )
 }
 
+/* ─── Chat history types ──────────────────────────── */
+const CHAT_HISTORY_KEY = 'edutrack_chat_history'
+const MAX_SESSIONS = 20
+
+interface ChatSession {
+  id: string
+  title: string
+  messages: ChatMessage[]
+  createdAt: string
+  updatedAt: string
+}
+
+function loadSessions(): ChatSession[] {
+  try {
+    const raw = localStorage.getItem(CHAT_HISTORY_KEY)
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
+function saveSessions(sessions: ChatSession[]) {
+  localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(sessions.slice(0, MAX_SESSIONS)))
+}
+
+function sessionTitle(msgs: ChatMessage[]): string {
+  const first = msgs.find((m) => m.isUser)
+  if (!first) return 'New Chat'
+  const text = first.content.slice(0, 40)
+  return text.length < first.content.length ? text + '…' : text
+}
+
 /* ─── Component ───────────────────────────────────────── */
 
-export default function ChatPanel({ isOpen, onClose, userRole }: ChatPanelProps) {
+export default function ChatPanel({ isOpen, onClose, userRole, user }: ChatPanelProps) {
   const role = (userRole as RoleName) || 'STUDENT'
   const router = useRouter()
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -88,6 +121,30 @@ export default function ChatPanel({ isOpen, onClose, userRole }: ChatPanelProps)
   const [editingContent, setEditingContent] = useState('')
   const [actionLoading, setActionLoading] = useState<string | null>(null) // messageId
 
+  // Chat history
+  const [sessions, setSessions] = useState<ChatSession[]>([])
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
+  const [showHistory, setShowHistory] = useState(false)
+
+  // Load sessions from localStorage on mount
+  useEffect(() => {
+    setSessions(loadSessions())
+  }, [])
+
+  // Save messages to active session whenever they change
+  useEffect(() => {
+    if (!activeSessionId || messages.length === 0) return
+    setSessions((prev) => {
+      const updated = prev.map((s) =>
+        s.id === activeSessionId
+          ? { ...s, messages, title: sessionTitle(messages), updatedAt: new Date().toISOString() }
+          : s,
+      )
+      saveSessions(updated)
+      return updated
+    })
+  }, [messages, activeSessionId])
+
   // Auto-scroll
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -98,11 +155,67 @@ export default function ChatPanel({ isOpen, onClose, userRole }: ChatPanelProps)
     if (isOpen) setTimeout(() => inputRef.current?.focus(), 300)
   }, [isOpen])
 
+  /* ─── Chat session helpers ─────────────────────── */
+  const startNewChat = useCallback(() => {
+    const id = uid()
+    const session: ChatSession = {
+      id,
+      title: 'New Chat',
+      messages: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    setSessions((prev) => {
+      const next = [session, ...prev]
+      saveSessions(next)
+      return next
+    })
+    setActiveSessionId(id)
+    setMessages([])
+    setShowHistory(false)
+  }, [])
+
+  const loadSession = useCallback((session: ChatSession) => {
+    setActiveSessionId(session.id)
+    setMessages(session.messages)
+    setShowHistory(false)
+  }, [])
+
+  const deleteSession = useCallback((sessionId: string) => {
+    setSessions((prev) => {
+      const next = prev.filter((s) => s.id !== sessionId)
+      saveSessions(next)
+      return next
+    })
+    if (activeSessionId === sessionId) {
+      setActiveSessionId(null)
+      setMessages([])
+    }
+  }, [activeSessionId])
+
   /* ─── Send message ────────────────────────────── */
   const sendMessage = useCallback(async (text?: string) => {
     const msg = (text ?? input).trim()
     if (!msg || sending) return
     if (!text) setInput('')
+
+    // Auto-create session if none active
+    if (!activeSessionId) {
+      const id = uid()
+      const session: ChatSession = {
+        id,
+        title: msg.slice(0, 40),
+        messages: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+      setSessions((prev) => {
+        const next = [session, ...prev]
+        saveSessions(next)
+        return next
+      })
+      setActiveSessionId(id)
+    }
 
     const userMsg: ChatMessage = {
       id: uid(),
@@ -123,10 +236,20 @@ export default function ChatPanel({ isOpen, onClose, userRole }: ChatPanelProps)
     setSending(true)
 
     try {
-      const { data } = await aiApi.post('/api/chat', {
+      const { data } = await aiApi.post('/chat', {
         message: msg,
         userRole: role,
-        context: {},
+        context: {
+          userName: user?.name ?? '',
+          userId: user?.id ?? '',
+          userEmail: user?.email ?? '',
+          departmentId:
+            user?.facultyProfile?.departmentId ??
+            user?.studentProfile?.departmentId ??
+            '',
+          year: user?.studentProfile?.year ?? '',
+          division: user?.studentProfile?.division ?? '',
+        },
       })
 
       const aiMsg: ChatMessage = {
@@ -166,7 +289,7 @@ export default function ChatPanel({ isOpen, onClose, userRole }: ChatPanelProps)
     } finally {
       setSending(false)
     }
-  }, [input, sending, role])
+  }, [input, sending, role, activeSessionId, user])
 
   /* ─── Handle action button click ──────────────── */
   const handleAction = useCallback(
@@ -224,7 +347,7 @@ export default function ChatPanel({ isOpen, onClose, userRole }: ChatPanelProps)
         case 'POST_REVIEW': {
           setActionLoading(msg.id)
           try {
-            const { data } = await aiApi.post('/api/action', {
+            const { data } = await aiApi.post('/action', {
               actionType: btn.action,
               agentUsed: msg.agentUsed ?? '',
               draftContent: msg.content,
@@ -373,10 +496,16 @@ export default function ChatPanel({ isOpen, onClose, userRole }: ChatPanelProps)
     const isApproval =
       isReviewDraft && msg.actionContext?.isApproved !== false
 
-    // Email: extract recipient count
-    const recipientCount = isEmailDraft
-      ? ((msg.actionContext?.recipients as string[])?.length ?? 0)
-      : 0
+    // Email: extract recipients info
+    const recipientEmails = isEmailDraft
+      ? ((msg.actionContext?.recipients as string[]) ?? [])
+      : []
+    const recipientNames = isEmailDraft
+      ? ((msg.actionContext?.recipientNames as string[]) ?? [])
+      : []
+    const recipientScope = isEmailDraft
+      ? ((msg.actionContext?.recipientScope as string) ?? '')
+      : ''
 
     let bubbleClass =
       'bg-[#1A2540] border border-[#2A3A5C] rounded-2xl rounded-bl-md px-4 py-3 max-w-[85%]'
@@ -395,7 +524,9 @@ export default function ChatPanel({ isOpen, onClose, userRole }: ChatPanelProps)
         {/* Header for email drafts */}
         {isEmailDraft && (
           <div className="text-xs text-amber-400 mb-1 ml-1">
-            📧 Email Draft{recipientCount > 0 ? ` — ${recipientCount} recipients` : ''}
+            📧 Email Draft
+            {recipientEmails.length > 0 ? ` — ${recipientEmails.length} recipients` : ''}
+            {recipientScope ? ` (${recipientScope.replace(/_/g, ' ').toLowerCase()})` : ''}
           </div>
         )}
 
@@ -410,6 +541,34 @@ export default function ChatPanel({ isOpen, onClose, userRole }: ChatPanelProps)
             ))}
           </div>
         </div>
+
+        {/* Recipient list for email drafts */}
+        {isEmailDraft && recipientEmails.length > 0 && !msg.actionsUsed && (
+          <div className="mt-2 ml-1 w-full max-w-[85%]">
+            <details className="group">
+              <summary className="text-[11px] text-[#7A8BAF] cursor-pointer hover:text-amber-400 transition-colors">
+                👥 {recipientEmails.length} recipient{recipientEmails.length !== 1 ? 's' : ''} — click to view
+              </summary>
+              <div className="mt-1 bg-[#1A2540] border border-[#2A3A5C] rounded-lg p-2 max-h-[120px] overflow-y-auto">
+                {recipientEmails.map((email, i) => (
+                  <div key={email} className="text-[11px] text-[#C5CEE0] py-0.5 flex items-center gap-1">
+                    <span className="text-amber-400">•</span>
+                    {recipientNames[i] ? (
+                      <span>{recipientNames[i]} <span className="text-[#4A5B7A]">({email})</span></span>
+                    ) : (
+                      <span>{email}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </details>
+          </div>
+        )}
+        {isEmailDraft && recipientEmails.length === 0 && !msg.actionsUsed && (
+          <div className="text-[11px] text-red-400/70 mt-1 ml-1">
+            ⚠ No recipients found. Try specifying the target (e.g. &quot;all students in my department&quot;)
+          </div>
+        )}
 
         {/* Agent badge */}
         {msg.agentUsed && msg.agentUsed !== 'general' && (
@@ -458,23 +617,93 @@ export default function ChatPanel({ isOpen, onClose, userRole }: ChatPanelProps)
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-[#2A3A5C]">
             <div className="flex items-center gap-3">
+              {showHistory && (
+                <button
+                  onClick={() => setShowHistory(false)}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-[#7A8BAF] hover:bg-[#1A2540] hover:text-[#EEF2FF] transition-all"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+              )}
               <h3 className="font-[var(--font-sora)] text-base font-semibold text-[#EEF2FF]">
-                AI Assistant
+                {showHistory ? 'Chat History' : 'AI Assistant'}
               </h3>
-              <span
-                className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${ROLE_COLORS[role]}`}
-              >
-                {role}
-              </span>
+              {!showHistory && (
+                <span
+                  className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${ROLE_COLORS[role]}`}
+                >
+                  {role}
+                </span>
+              )}
             </div>
-            <button
-              onClick={onClose}
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-[#7A8BAF] hover:bg-[#1A2540] hover:text-[#EEF2FF] transition-all duration-200"
-            >
-              <X size={18} />
-            </button>
+            <div className="flex items-center gap-1">
+              {!showHistory && (
+                <>
+                  <button
+                    onClick={() => setShowHistory(true)}
+                    title="Chat history"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-[#7A8BAF] hover:bg-[#1A2540] hover:text-[#EEF2FF] transition-all duration-200"
+                  >
+                    <History size={16} />
+                  </button>
+                  <button
+                    onClick={startNewChat}
+                    title="New chat"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-[#7A8BAF] hover:bg-[#1A2540] hover:text-amber-400 transition-all duration-200"
+                  >
+                    <Send size={14} className="rotate-[-45deg]" />
+                  </button>
+                </>
+              )}
+              <button
+                onClick={onClose}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-[#7A8BAF] hover:bg-[#1A2540] hover:text-[#EEF2FF] transition-all duration-200"
+              >
+                <X size={18} />
+              </button>
+            </div>
           </div>
 
+          {/* History panel */}
+          {showHistory ? (
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2">
+              {sessions.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                  <p className="text-[#7A8BAF] text-sm">No chat history yet</p>
+                  <p className="text-[#4A5B7A] text-xs mt-1">Start a conversation to see it here</p>
+                </div>
+              ) : (
+                sessions.map((s) => (
+                  <div
+                    key={s.id}
+                    className={`group flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer transition-colors ${
+                      s.id === activeSessionId
+                        ? 'bg-amber-500/10 border border-amber-500/30'
+                        : 'bg-[#1A2540] border border-[#2A3A5C] hover:border-[#3A4A6C]'
+                    }`}
+                    onClick={() => loadSession(s)}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-[#EEF2FF] truncate">{s.title}</p>
+                      <p className="text-[10px] text-[#4A5B7A] mt-0.5">
+                        {new Date(s.updatedAt).toLocaleDateString()} &middot; {s.messages.filter((m) => m.isUser).length} messages
+                      </p>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        deleteSession(s.id)
+                      }}
+                      className="opacity-0 group-hover:opacity-100 w-7 h-7 rounded flex items-center justify-center text-[#7A8BAF] hover:text-red-400 hover:bg-red-500/10 transition-all"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          ) : (
+          <>
           {/* Messages */}
           <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
             {messages.length === 0 && (
@@ -527,6 +756,8 @@ export default function ChatPanel({ isOpen, onClose, userRole }: ChatPanelProps)
               </button>
             </div>
           </div>
+          </>
+          )}
         </motion.div>
       )}
     </AnimatePresence>

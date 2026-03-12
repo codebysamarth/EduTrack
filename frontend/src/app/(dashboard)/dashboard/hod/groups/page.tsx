@@ -42,7 +42,11 @@ interface GroupData {
   project?: { id: string; title: string; status: string } | null
   departmentId?: string
   department?: { id: string; name: string; code: string } | null
+  status?: string
 }
+
+const GROUP_STATUS_LABELS: Record<string, string> = { FORMING: 'Forming', PENDING_APPROVAL: 'Pending Approval', APPROVED: 'Approved' }
+const GROUP_STATUS_COLORS: Record<string, string> = { FORMING: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30', PENDING_APPROVAL: 'bg-amber-500/20 text-amber-400 border-amber-500/30', APPROVED: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' }
 
 interface GroupDetail {
   id: string; name: string; year: string; division: string
@@ -312,14 +316,14 @@ export default function HodGroupsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[#2A3A5C]">
-                {['Group', 'Year', 'Division', 'Guide', 'Students', 'Project', 'Status', 'Actions'].map(h => (
+                {['Group', 'Year', 'Division', 'Guide', 'Students', 'Group Status', 'Project', 'Status', 'Actions'].map(h => (
                   <th key={h} className="text-left py-3 px-4 text-xs text-[#4A5B7A] font-medium">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {paginated.length === 0 ? (
-                <tr><td colSpan={8} className="text-center py-12 text-sm text-[#4A5B7A]">No groups found</td></tr>
+                <tr><td colSpan={9} className="text-center py-12 text-sm text-[#4A5B7A]">No groups found</td></tr>
               ) : paginated.map(g => (
                 <tr key={g.id} className="border-b border-[#2A3A5C]/50 hover:bg-[#1A2540] transition-colors">
                   <td className="py-3 px-4 text-[#EEF2FF] font-medium">{g.name}</td>
@@ -336,6 +340,11 @@ export default function HodGroupsPage() {
                     ) : <span className="text-xs text-[#4A5B7A]">—</span>}
                   </td>
                   <td className="py-3 px-4 text-[#7A8BAF] text-xs">{g.membersCount ?? 0}</td>
+                  <td className="py-3 px-4">
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full border ${GROUP_STATUS_COLORS[g.status ?? 'APPROVED'] ?? 'bg-[#1A2540] text-[#7A8BAF] border-[#2A3A5C]'}`}>
+                      {GROUP_STATUS_LABELS[g.status ?? 'APPROVED'] ?? g.status}
+                    </span>
+                  </td>
                   <td className="py-3 px-4 text-[#7A8BAF] text-xs max-w-[150px] truncate">{g.project?.title ?? '—'}</td>
                   <td className="py-3 px-4">
                     {g.project ? (

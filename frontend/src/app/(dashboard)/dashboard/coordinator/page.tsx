@@ -17,9 +17,16 @@ import {
   Eye,
   UserMinus,
   UserPlus,
+  Clock,
+  ClipboardList,
+  CheckCircle2,
+  BookOpen,
+  XCircle,
+  Github,
+  Video,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts'
 import { api } from '@/lib/api'
 import { downloadAsExcel } from '@/lib/exportExcel'
 import { useAuth } from '@/context/AuthContext'
@@ -67,6 +74,7 @@ function Skeleton({ className = '' }: { className?: string }) {
 
 interface GroupData {
   id: string; name: string; year: string; division: string; academicYear: string; semester: number
+  status?: string
   guide?: { id: string; name: string; prnNo?: string }
   coordinator?: { id: string; name: string }
   membersCount?: number; members?: MemberData[]
@@ -84,6 +92,17 @@ interface StudentData {
   id: string; name: string; email: string; prnNo?: string; enrollmentNo?: string
   year: string; division: string
   group?: { id: string; name: string; guideName?: string } | null
+}
+interface ProjectData {
+  id: string; title: string; status: string; domain?: string; sdgGoals?: number[]
+  group?: { name: string; year: string; division: string; members?: MemberData[] }
+  guide?: { name: string; prnNo?: string }
+  memberCount?: number; latestReview?: { isApproved: boolean; comment: string; rejectionReason?: string }
+  reviews?: ReviewData[]
+  abstract?: string; githubLink?: string; videoLink?: string; techStack?: string
+}
+interface ReviewData {
+  id: string; isApproved: boolean; comment: string; rejectionReason?: string; createdAt: string
 }
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } }
@@ -126,18 +145,38 @@ export default function CoordinatorPage() {
   const [editStudentSearch, setEditStudentSearch] = useState('')
   const [editStudents, setEditStudents] = useState<StudentData[]>([])
   const [editLoading, setEditLoading] = useState(false)
+  const [approveLoading, setApproveLoading] = useState('')
+
+  // Projects & Reviews
+  const [projects, setProjects] = useState<ProjectData[]>([])
+  const [reviewDialog, setReviewDialog] = useState<ProjectData | null>(null)
+  const [reviewForm, setReviewForm] = useState({ comment: '', isApproved: true, rejectionReason: '' })
+  const [reviewSubmitting, setReviewSubmitting] = useState(false)
+  const [publishingId, setPublishingId] = useState('')
+  const [confirmPublish, setConfirmPublish] = useState<string | null>(null)
+
+  const GROUP_STATUS_LABELS: Record<string, string> = {
+    FORMING: 'Forming', PENDING_APPROVAL: 'Pending Approval', APPROVED: 'Approved',
+  }
+  const GROUP_STATUS_COLORS: Record<string, string> = {
+    FORMING: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
+    PENDING_APPROVAL: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+    APPROVED: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+  }
 
   const fetchData = useCallback(async () => {
     if (!deptId) return
     try {
-      const [g, s, f] = await Promise.all([
+      const [g, s, f, p] = await Promise.all([
         api.get('/groups'),
         api.get(`/users/students?departmentId=${deptId}`),
         api.get(`/users/faculty?departmentId=${deptId}`),
+        api.get('/projects'),
       ])
       setGroups(g.data)
       setStudents(s.data)
       setFaculty(f.data)
+      setProjects(p.data)
     } catch { /* */ }
     setLoading(false)
   }, [deptId])
@@ -160,9 +199,6 @@ export default function CoordinatorPage() {
   const divisions = useMemo(() => [...new Set(groups.map(g => g.division))].sort(), [groups])
 
   // Stats
-  const submittedPct = groups.length > 0
-    ? Math.round((groups.filter(g => g.project && g.project.status !== 'DRAFT').length / groups.length) * 100)
-    : 0
   const guidesCount = new Set(groups.filter(g => g.guide?.id).map(g => g.guide!.id)).size
 
   // Pie chart
@@ -207,10 +243,20 @@ export default function CoordinatorPage() {
         guideId: createForm.guideId || undefined,
         studentIds: createForm.studentIds,
       })
+      toast.success('Group created successfully')
       setShowCreate(false)
       setCreateForm({ name: '', year: '', division: '', academicYear: '', semester: 1, guideId: '', studentIds: [] })
       await fetchData()
-    } catch { /* */ }
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || 'Failed to create group'
+      const conflicting = err?.response?.data?.conflicting
+      if (conflicting?.length) {
+        const names = students.filter(s => conflicting.includes(s.id)).map(s => s.name)
+        toast.error(`${msg}: ${names.join(', ')}`)
+      } else {
+        toast.error(msg)
+      }
+    }
     setCreateLoading(false)
   }
 
@@ -268,6 +314,32 @@ export default function CoordinatorPage() {
 
   const currentMemberCount = editMembers.length - removeStudentIds.length + addStudentIds.length
 
+  const pendingGroups = groups.filter(g => g.status === 'PENDING_APPROVAL')
+
+  const handleApproveGroup = async (groupId: string, guideId?: string) => {
+    setApproveLoading(groupId)
+    try {
+      await api.post(`/groups/${groupId}/approve`, { guideId: guideId || undefined })
+      toast.success('Group approved!')
+      await fetchData()
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || 'Failed to approve group')
+    }
+    setApproveLoading('')
+  }
+
+  const handleRejectGroup = async (groupId: string) => {
+    setApproveLoading(groupId)
+    try {
+      await api.post(`/groups/${groupId}/reject-group`, { reason: 'Rejected by coordinator' })
+      toast.success('Group rejected — sent back to forming')
+      await fetchData()
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || 'Failed to reject group')
+    }
+    setApproveLoading('')
+  }
+
   const exportToExcel = async () => {
     try {
       const response = await api.get('/export/groups')
@@ -280,6 +352,65 @@ export default function CoordinatorPage() {
       const response = await api.get('/export/projects')
       downloadAsExcel(response.data, 'coordinator_projects_export')
     } catch { /* */ }
+  }
+
+  // Review & publish
+  const pendingProjects = projects.filter(p => p.status === 'SUBMITTED' || p.status === 'UNDER_REVIEW')
+  const approvedCount = projects.filter(p => ['APPROVED', 'COMPLETED'].includes(p.status)).length
+  const publishedCount = projects.filter(p => p.status === 'PUBLISHED').length
+
+  // Bar chart data for project status
+  const projectStatusCounts: Record<string, number> = {}
+  projects.forEach(p => { projectStatusCounts[p.status] = (projectStatusCounts[p.status] || 0) + 1 })
+  const barChartData = Object.entries(projectStatusCounts).map(([status, count]) => ({
+    status: STATUS_LABELS[status] || status, count, key: status,
+  }))
+
+  // Year-wise group distribution chart data
+  const yearGroupCounts: Record<string, number> = {}
+  groups.forEach(g => { yearGroupCounts[g.year] = (yearGroupCounts[g.year] || 0) + 1 })
+  const yearChartData = Object.entries(yearGroupCounts).map(([year, count]) => ({ year, count }))
+
+  const openReview = async (p: ProjectData) => {
+    try {
+      const full = await api.get(`/projects/${p.id}`)
+      setReviewDialog(full.data)
+    } catch {
+      setReviewDialog(p)
+    }
+    setReviewForm({ comment: '', isApproved: true, rejectionReason: '' })
+  }
+
+  const submitReview = async () => {
+    if (!reviewDialog) return
+    setReviewSubmitting(true)
+    try {
+      const body: Record<string, unknown> = {
+        isApproved: reviewForm.isApproved,
+        comment: reviewForm.comment,
+      }
+      if (!reviewForm.isApproved) body.rejectionReason = reviewForm.rejectionReason
+      await api.post(`/projects/${reviewDialog.id}/review`, body)
+      toast.success(reviewForm.isApproved ? 'Project approved!' : 'Project rejected')
+      setReviewDialog(null)
+      await fetchData()
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || 'Failed to submit review')
+    }
+    setReviewSubmitting(false)
+  }
+
+  const handlePublish = async (projectId: string) => {
+    setPublishingId(projectId)
+    try {
+      await api.patch(`/projects/${projectId}/publish`)
+      toast.success('Project published to showcase!')
+      setConfirmPublish(null)
+      await fetchData()
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || 'Failed to publish')
+    }
+    setPublishingId('')
   }
 
   if (loading) {
@@ -296,21 +427,100 @@ export default function CoordinatorPage() {
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
       {/* ═══ SECTION 1 — Stats ═══ */}
-      <motion.div variants={item} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <motion.div variants={item} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {[
           { label: 'Total Groups', value: groups.length, icon: LayoutGrid },
-          { label: 'Total Students', value: students.length, icon: GraduationCap },
-          { label: 'Submitted %', value: `${submittedPct}%`, icon: UserCheck },
+          { label: 'Pending Approval', value: pendingGroups.length, icon: UserCheck, pulse: pendingGroups.length > 0 },
+          { label: 'Pending Reviews', value: pendingProjects.length, icon: ClipboardList, pulse: pendingProjects.length > 0 },
+          { label: 'Approved', value: approvedCount, icon: CheckCircle2 },
+          { label: 'Published', value: publishedCount, icon: BookOpen },
           { label: 'Guides', value: guidesCount, icon: Users },
         ].map(c => (
           <div key={c.label} className="bg-[#0F1729] border border-[#2A3A5C] rounded-2xl p-5">
             <div className="flex items-center gap-2 mb-2">
               <c.icon size={14} className="text-[#4A5B7A]" />
               <span className="text-xs text-[#7A8BAF]">{c.label}</span>
+              {c.pulse && <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />}
             </div>
             <p className="font-[var(--font-sora)] text-2xl font-bold text-[#EEF2FF]">{c.value}</p>
           </div>
         ))}
+      </motion.div>
+
+      {/* ═══ SECTION 1.5 — Pending Approval ═══ */}
+      {pendingGroups.length > 0 && (
+        <motion.div variants={item} className="bg-[#0F1729] border border-amber-500/30 rounded-2xl p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Clock size={16} className="text-amber-400"/>
+            <h3 className="font-[var(--font-sora)] text-base font-semibold text-[#EEF2FF]">Groups Pending Approval</h3>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">{pendingGroups.length}</span>
+          </div>
+          <div className="space-y-3">
+            {pendingGroups.map(g => (
+              <div key={g.id} className="bg-[#1A2540] border border-[#2A3A5C] rounded-xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <h4 className="text-sm font-semibold text-[#EEF2FF]">{g.name}</h4>
+                    <p className="text-xs text-[#7A8BAF]">{g.year} · Div {g.division} · {g.academicYear}</p>
+                  </div>
+                  <span className="text-xs text-[#4A5B7A]">{g.membersCount ?? g.members?.length ?? 0} members</span>
+                </div>
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                  <button onClick={() => openView(g)} className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"><Eye size={10}/> View Members</button>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => handleApproveGroup(g.id)} disabled={approveLoading === g.id}
+                    className="flex-1 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-medium transition-all inline-flex items-center justify-center gap-1.5 disabled:opacity-60">
+                    {approveLoading === g.id ? <Loader2 size={12} className="animate-spin"/> : <UserCheck size={12}/>} Approve
+                  </button>
+                  <button onClick={() => handleRejectGroup(g.id)} disabled={approveLoading === g.id}
+                    className="flex-1 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl text-xs font-medium transition-all inline-flex items-center justify-center gap-1.5 disabled:opacity-60">
+                    {approveLoading === g.id ? <Loader2 size={12} className="animate-spin"/> : <X size={12}/>} Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* ═══ SECTION 2a — Pending Reviews ═══ */}
+      <motion.div variants={item} className="bg-[#0F1729] border border-[#2A3A5C] rounded-2xl p-6">
+        <h3 className="font-[var(--font-sora)] text-base font-semibold text-[#EEF2FF] mb-4">Pending Reviews</h3>
+        {pendingProjects.length === 0 ? (
+          <div className="text-center py-8">
+            <ClipboardList size={32} className="text-[#2A3A5C] mx-auto mb-2" />
+            <p className="text-sm text-[#7A8BAF]">No pending reviews</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[#2A3A5C]">
+                  {['Group', 'Project Title', 'Guide', 'Status', 'Action'].map(h => (
+                    <th key={h} className="text-left py-3 px-3 text-xs text-[#4A5B7A] font-medium">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {pendingProjects.map(p => (
+                  <tr key={p.id} className="border-b border-[#2A3A5C]/50 hover:bg-[#1A2540] transition-colors">
+                    <td className="py-3 px-3 text-[#EEF2FF]">{p.group?.name}</td>
+                    <td className="py-3 px-3 text-[#EEF2FF] font-medium">{p.title}</td>
+                    <td className="py-3 px-3 text-[#7A8BAF]">{p.guide?.name ?? '—'}</td>
+                    <td className="py-3 px-3"><StatusBadge status={p.status} /></td>
+                    <td className="py-3 px-3">
+                      <button onClick={() => openReview(p)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-lg text-xs transition-all duration-200">
+                        <Eye size={12} /> Review
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </motion.div>
 
       {/* ═══ SECTION 2 — Groups table ═══ */}
@@ -352,7 +562,7 @@ export default function CoordinatorPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[#2A3A5C]">
-                  {['Group', 'Year', 'Div', 'Guide', 'Students', 'Status', 'Actions'].map(h => (
+                  {['Group', 'Year', 'Div', 'Guide', 'Students', 'Group Status', 'Project', 'Actions'].map(h => (
                     <th key={h} className="text-left py-3 px-3 text-xs text-[#4A5B7A] font-medium">{h}</th>
                   ))}
                 </tr>
@@ -375,6 +585,13 @@ export default function CoordinatorPage() {
                     </td>
                     <td className="py-3 px-3 text-[#7A8BAF]">{g.membersCount ?? g.members?.length ?? '—'}</td>
                     <td className="py-3 px-3">
+                      {g.status ? (
+                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${GROUP_STATUS_COLORS[g.status] ?? 'bg-gray-500/20 text-gray-400 border-gray-500/30'}`}>
+                          {GROUP_STATUS_LABELS[g.status] ?? g.status}
+                        </span>
+                      ) : <span className="text-xs text-[#4A5B7A]">—</span>}
+                    </td>
+                    <td className="py-3 px-3">
                       {g.project ? <StatusBadge status={g.project.status} /> : <span className="text-xs text-[#4A5B7A]">—</span>}
                     </td>
                     <td className="py-3 px-3">
@@ -385,6 +602,19 @@ export default function CoordinatorPage() {
                         <button onClick={() => openEdit(g)} className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1">
                           <Pencil size={10} /> Edit
                         </button>
+                        {g.project && (
+                          <button onClick={() => openReview({ id: g.project!.id, title: g.project!.title, status: g.project!.status } as ProjectData)}
+                            className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1">
+                            <ClipboardList size={10} /> Project
+                          </button>
+                        )}
+                        {g.project && ['APPROVED', 'COMPLETED'].includes(g.project.status) && (
+                          <button onClick={() => setConfirmPublish(g.project!.id)}
+                            disabled={publishingId === g.project.id}
+                            className="text-xs text-green-400 hover:text-green-300 transition-colors">
+                            {publishingId === g.project.id ? 'Publishing…' : 'Publish'}
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -395,22 +625,65 @@ export default function CoordinatorPage() {
         )}
       </motion.div>
 
-      {/* ═══ SECTION 4 — Pie Chart ═══ */}
-      {pieData.length > 0 && (
+      {/* ═══ SECTION 4 — Charts ═══ */}
+      <motion.div variants={item} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Pie Chart — Group Project Status */}
+        {pieData.length > 0 && (
+          <div className="bg-[#0F1729] border border-[#2A3A5C] rounded-2xl p-6">
+            <h3 className="font-[var(--font-sora)] text-base font-semibold text-[#EEF2FF] mb-4">Group Status Distribution</h3>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={90}
+                    paddingAngle={2} stroke="none">
+                    {pieData.map(entry => (
+                      <Cell key={entry.key} fill={PIE_COLORS[entry.key] ?? '#4A5B7A'} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ background: '#0F1729', border: '1px solid #2A3A5C', borderRadius: 12, color: '#EEF2FF' }} />
+                  <Legend formatter={(value) => <span className="text-xs text-[#7A8BAF]">{value}</span>} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
+
+        {/* Bar Chart — Project Status Distribution */}
+        {barChartData.length > 0 && (
+          <div className="bg-[#0F1729] border border-[#2A3A5C] rounded-2xl p-6">
+            <h3 className="font-[var(--font-sora)] text-base font-semibold text-[#EEF2FF] mb-4">Project Status Distribution</h3>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={barChartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#2A3A5C" />
+                  <XAxis dataKey="status" tick={{ fill: '#7A8BAF', fontSize: 11 }} axisLine={{ stroke: '#2A3A5C' }} />
+                  <YAxis tick={{ fill: '#7A8BAF', fontSize: 12 }} axisLine={{ stroke: '#2A3A5C' }} allowDecimals={false} />
+                  <Tooltip contentStyle={{ background: '#0F1729', border: '1px solid #2A3A5C', borderRadius: 12, color: '#EEF2FF' }} />
+                  <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+                    {barChartData.map((entry) => (
+                      <Cell key={entry.key} fill={PIE_COLORS[entry.key] ?? '#6B7280'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
+      </motion.div>
+
+      {/* Year-wise Group Distribution */}
+      {yearChartData.length > 0 && (
         <motion.div variants={item} className="bg-[#0F1729] border border-[#2A3A5C] rounded-2xl p-6">
-          <h3 className="font-[var(--font-sora)] text-base font-semibold text-[#EEF2FF] mb-4">Status Distribution</h3>
-          <div className="h-64">
+          <h3 className="font-[var(--font-sora)] text-base font-semibold text-[#EEF2FF] mb-4">Year-wise Group Distribution</h3>
+          <div className="h-52">
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={90}
-                  paddingAngle={2} stroke="none">
-                  {pieData.map(entry => (
-                    <Cell key={entry.key} fill={PIE_COLORS[entry.key] ?? '#4A5B7A'} />
-                  ))}
-                </Pie>
+              <BarChart data={yearChartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#2A3A5C" />
+                <XAxis dataKey="year" tick={{ fill: '#7A8BAF', fontSize: 12 }} axisLine={{ stroke: '#2A3A5C' }} />
+                <YAxis tick={{ fill: '#7A8BAF', fontSize: 12 }} axisLine={{ stroke: '#2A3A5C' }} allowDecimals={false} />
                 <Tooltip contentStyle={{ background: '#0F1729', border: '1px solid #2A3A5C', borderRadius: 12, color: '#EEF2FF' }} />
-                <Legend formatter={(value) => <span className="text-xs text-[#7A8BAF]">{value}</span>} />
-              </PieChart>
+                <Bar dataKey="count" fill="#F59E0B" radius={[6, 6, 0, 0]} />
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </motion.div>
@@ -696,11 +969,132 @@ export default function CoordinatorPage() {
               </div>
 
               <button onClick={handleCreateGroup}
-                disabled={!createForm.name || !createForm.year || !createForm.division || createForm.studentIds.length < 3 || createLoading}
+                disabled={!createForm.name || !createForm.year || !createForm.division || !createForm.academicYear || createForm.studentIds.length < 3 || createLoading}
                 className="w-full mt-6 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-xl transition-all duration-200 text-sm flex items-center justify-center gap-2 disabled:opacity-60">
                 {createLoading ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
                 Create Group
               </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ═══ Review Dialog ═══ */}
+      <AnimatePresence>
+        {reviewDialog && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={() => setReviewDialog(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[#0F1729] border border-[#2A3A5C] rounded-2xl p-6 w-full max-w-xl max-h-[85vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-[var(--font-sora)] text-lg font-semibold text-[#EEF2FF]">{reviewDialog.title}</h3>
+                <button onClick={() => setReviewDialog(null)} className="text-[#4A5B7A] hover:text-[#EEF2FF] transition-colors"><X size={18} /></button>
+              </div>
+
+              {reviewDialog.abstract && (
+                <p className="text-sm text-[#7A8BAF] mb-3">{reviewDialog.abstract}</p>
+              )}
+              <div className="flex flex-wrap gap-2 mb-3">
+                {reviewDialog.domain && (
+                  <span className="text-xs px-2.5 py-1 rounded-full border border-amber-500/30 text-amber-400 bg-amber-500/10">{reviewDialog.domain}</span>
+                )}
+                {reviewDialog.sdgGoals?.map(g => (
+                  <span key={g} className="text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">SDG {g}</span>
+                ))}
+              </div>
+              <div className="flex gap-3 mb-4">
+                {reviewDialog.githubLink && (
+                  <a href={reviewDialog.githubLink} target="_blank" rel="noopener noreferrer" className="text-xs text-[#7A8BAF] hover:text-amber-400 flex items-center gap-1"><Github size={12} /> GitHub</a>
+                )}
+                {reviewDialog.videoLink && (
+                  <a href={reviewDialog.videoLink} target="_blank" rel="noopener noreferrer" className="text-xs text-[#7A8BAF] hover:text-amber-400 flex items-center gap-1"><Video size={12} /> Video</a>
+                )}
+              </div>
+
+              {(reviewDialog as unknown as { group?: { members?: MemberData[] } }).group?.members && (
+                <div className="mb-4 p-3 rounded-xl bg-[#1A2540]">
+                  <p className="text-xs text-[#4A5B7A] mb-2">Group Members</p>
+                  {((reviewDialog as unknown as { group: { members: MemberData[] } }).group.members).map(m => (
+                    <div key={m.id} className="flex items-center gap-2 py-1">
+                      <span className="text-sm text-[#EEF2FF]">{m.student.name}</span>
+                      {m.student.prnNo && <PrnBadge prn={m.student.prnNo} />}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {['SUBMITTED', 'UNDER_REVIEW'].includes(reviewDialog.status) && (
+                <>
+                  <div className="border-t border-[#2A3A5C] pt-4 mt-4">
+                    <label className="block text-xs text-[#7A8BAF] mb-1.5">Review Comment *</label>
+                    <textarea value={reviewForm.comment} onChange={e => setReviewForm(p => ({ ...p, comment: e.target.value }))} rows={3}
+                      className="w-full px-3 py-2.5 bg-[#1A2540] border border-[#2A3A5C] rounded-xl text-sm text-[#EEF2FF] focus:border-amber-500 focus:outline-none resize-none transition-all duration-200"
+                      placeholder="Your review comments..." />
+                  </div>
+
+                  <div className="flex gap-3 mt-4">
+                    <button onClick={() => setReviewForm(p => ({ ...p, isApproved: true }))}
+                      className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 border ${
+                        reviewForm.isApproved ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'text-[#4A5B7A] border-[#2A3A5C] hover:border-green-500/30'}`}>
+                      <CheckCircle2 size={14} /> Approve
+                    </button>
+                    <button onClick={() => setReviewForm(p => ({ ...p, isApproved: false }))}
+                      className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 border ${
+                        !reviewForm.isApproved ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'text-[#4A5B7A] border-[#2A3A5C] hover:border-red-500/30'}`}>
+                      <XCircle size={14} /> Reject
+                    </button>
+                  </div>
+
+                  {!reviewForm.isApproved && (
+                    <div className="mt-3">
+                      <label className="block text-xs text-[#7A8BAF] mb-1.5">Rejection Reason *</label>
+                      <textarea value={reviewForm.rejectionReason} onChange={e => setReviewForm(p => ({ ...p, rejectionReason: e.target.value }))} rows={2}
+                        className="w-full px-3 py-2.5 bg-red-500/5 border border-red-500/20 rounded-xl text-sm text-[#EEF2FF] focus:border-red-500 focus:outline-none resize-none transition-all duration-200"
+                        placeholder="Explain what needs to be improved..." />
+                    </div>
+                  )}
+
+                  <button onClick={submitReview}
+                    disabled={!reviewForm.comment || (!reviewForm.isApproved && !reviewForm.rejectionReason) || reviewSubmitting}
+                    className="w-full mt-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-xl transition-all duration-200 text-sm flex items-center justify-center gap-2 disabled:opacity-60">
+                    {reviewSubmitting ? <Loader2 size={14} className="animate-spin" /> : null}
+                    Submit Review
+                  </button>
+                </>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ═══ Publish Confirmation ═══ */}
+      <AnimatePresence>
+        {confirmPublish && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={() => setConfirmPublish(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[#0F1729] border border-[#2A3A5C] rounded-2xl p-6 w-full max-w-sm"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="font-[var(--font-sora)] text-lg font-semibold text-[#EEF2FF] mb-2">Publish Project?</h3>
+              <p className="text-sm text-[#7A8BAF] mb-6">This will make the project visible on the public showcase.</p>
+              <div className="flex gap-3">
+                <button onClick={() => setConfirmPublish(null)} className="flex-1 py-2.5 border border-[#2A3A5C] text-[#7A8BAF] rounded-xl text-sm hover:bg-[#1A2540] transition-all duration-200">Cancel</button>
+                <button onClick={() => handlePublish(confirmPublish)} disabled={!!publishingId}
+                  className="flex-1 py-2.5 bg-green-500 hover:bg-green-400 text-black font-semibold rounded-xl text-sm transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-60">
+                  {publishingId ? <Loader2 size={14} className="animate-spin" /> : null} Publish
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}

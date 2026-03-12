@@ -2,6 +2,7 @@ const router = require('express').Router();
 const prisma = require('../lib/prisma');
 const { verifyToken } = require('../middleware/auth');
 const { requireRole } = require('../middleware/roleGuard');
+const { checkProjectUniqueness } = require('../lib/similarity');
 
 // ─── Helper: build role-based where clause for projects (OR-logic) ───
 async function buildProjectWhereClause(user, prisma) {
@@ -82,6 +83,37 @@ async function verifyGroupMember(userId, projectId) {
   });
 }
 
+// ─── Helper: fetch existing projects for similarity checking ───
+async function getExistingProjectsForComparison(excludeGroupId) {
+  const projects = await prisma.project.findMany({
+    where: {
+      // Check ongoing (DRAFT→APPROVED) + COMPLETED + PUBLISHED; skip REJECTED
+      status: { not: 'REJECTED' },
+      ...(excludeGroupId ? { groupId: { not: excludeGroupId } } : {}),
+    },
+    select: { id: true, title: true, abstract: true, domain: true, group: { select: { name: true } } },
+  });
+  return projects.map((p) => ({
+    id: p.id, title: p.title, abstract: p.abstract, domain: p.domain, groupName: p.group?.name || '',
+  }));
+}
+
+// ═══════════════════════════════════════════════════════
+// POST /check-similarity  — Check project uniqueness before creating
+// ═══════════════════════════════════════════════════════
+router.post('/check-similarity', verifyToken, async (req, res, next) => {
+  try {
+    const { title, abstract, domain, excludeGroupId } = req.body;
+    if (!title) return res.status(400).json({ error: 'title is required' });
+
+    const existingProjects = await getExistingProjectsForComparison(excludeGroupId);
+    const result = checkProjectUniqueness({ title, abstract, domain }, existingProjects);
+    return res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ═══════════════════════════════════════════════════════
 // POST /  — Create project (group leader only)
 // ═══════════════════════════════════════════════════════
@@ -107,6 +139,13 @@ router.post('/', verifyToken, async (req, res, next) => {
 
     const group = await prisma.group.findUnique({ where: { id: groupId } });
 
+    // Similarity check before creation
+    const existingProjects = await getExistingProjectsForComparison(groupId);
+    const uniquenessResult = checkProjectUniqueness(
+      { title, abstract: abstract || '', domain: domain || '' },
+      existingProjects
+    );
+
     const project = await prisma.project.create({
       data: {
         groupId,
@@ -121,7 +160,13 @@ router.post('/', verifyToken, async (req, res, next) => {
       },
     });
 
-    return res.status(201).json(project);
+    return res.status(201).json({
+      ...project,
+      similarityWarning: uniquenessResult.isUnique ? null : {
+        message: 'Similar projects detected. Consider differentiating your project.',
+        similarProjects: uniquenessResult.similarProjects,
+      },
+    });
   } catch (err) {
     next(err);
   }
@@ -146,13 +191,13 @@ router.patch('/:id', verifyToken, async (req, res, next) => {
     const hasEditFields = editFields.some((f) => req.body[f] !== undefined);
 
     if (hasEditFields) {
-      // Editing project content — leader only, DRAFT/REJECTED only
+      // Editing project content — leader only, not after PUBLISHED
       const leader = await verifyLeader(req.user.userId, project.groupId);
       if (!leader) {
         return res.status(403).json({ error: 'Only group leader can edit project details' });
       }
-      if (!['DRAFT', 'REJECTED'].includes(project.status)) {
-        return res.status(400).json({ error: 'Cannot edit project in current status' });
+      if (project.status === 'PUBLISHED') {
+        return res.status(400).json({ error: 'Cannot edit a published project' });
       }
     } else {
       // Link-only update — any group member can update resource links
@@ -205,6 +250,13 @@ router.post('/:id/submit', verifyToken, async (req, res, next) => {
       return res.status(400).json({ error: 'Title and abstract are required before submission' });
     }
 
+    // Similarity check before submission
+    const existingProjects = await getExistingProjectsForComparison(project.groupId);
+    const uniquenessResult = checkProjectUniqueness(
+      { title: project.title, abstract: project.abstract, domain: project.domain || '' },
+      existingProjects
+    );
+
     await prisma.project.update({
       where: { id },
       data: { status: 'SUBMITTED' },
@@ -219,7 +271,14 @@ router.post('/:id/submit', verifyToken, async (req, res, next) => {
       },
     });
 
-    return res.json({ message: 'Project submitted for review', status: 'SUBMITTED' });
+    return res.json({
+      message: 'Project submitted for review',
+      status: 'SUBMITTED',
+      similarityWarning: uniquenessResult.isUnique ? null : {
+        message: 'Similar projects were found. Your project has been submitted but may require review for uniqueness.',
+        similarProjects: uniquenessResult.similarProjects,
+      },
+    });
   } catch (err) {
     next(err);
   }
@@ -293,6 +352,56 @@ router.get('/', verifyToken, async (req, res, next) => {
         year: p.group.year,
         division: p.group.division,
       },
+      guide: p.group.guide
+        ? { name: p.group.guide.name, prnNo: p.group.guide.facultyProfile?.prnNo || null }
+        : null,
+      latestReview: p.reviews[0] || null,
+      memberCount: p.group._count.members,
+    }));
+
+    return res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ═══════════════════════════════════════════════════════
+// GET /all  — All projects (view-only, any faculty)
+// ═══════════════════════════════════════════════════════
+router.get('/all', verifyToken, requireRole('GUIDE', 'COORDINATOR', 'HOD', 'ADMIN'), async (req, res, next) => {
+  try {
+    const whereClause = {};
+    if (req.query.departmentId) whereClause.departmentId = req.query.departmentId;
+    if (req.query.status) whereClause.status = req.query.status;
+
+    const projects = await prisma.project.findMany({
+      where: whereClause,
+      include: {
+        department: { select: { id: true, name: true, code: true } },
+        group: {
+          include: {
+            guide: { include: { facultyProfile: true } },
+            _count: { select: { members: true } },
+          },
+        },
+        reviews: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: { id: true, isApproved: true, comment: true, rejectionReason: true, createdAt: true },
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    const result = projects.map((p) => ({
+      id: p.id,
+      title: p.title,
+      status: p.status,
+      domain: p.domain,
+      sdgGoals: p.sdgGoals,
+      isPublished: p.isPublished,
+      department: p.department || null,
+      group: { id: p.group.id, name: p.group.name, year: p.group.year, division: p.group.division },
       guide: p.group.guide
         ? { name: p.group.guide.name, prnNo: p.group.guide.facultyProfile?.prnNo || null }
         : null,
@@ -402,7 +511,7 @@ router.get('/:id', verifyToken, async (req, res, next) => {
 // ═══════════════════════════════════════════════════════
 // POST /:id/review  — Guide reviews a project
 // ═══════════════════════════════════════════════════════
-router.post('/:id/review', verifyToken, requireRole('GUIDE', 'HOD', 'ADMIN'), async (req, res, next) => {
+router.post('/:id/review', verifyToken, requireRole('GUIDE', 'COORDINATOR', 'HOD', 'ADMIN'), async (req, res, next) => {
   try {
     const { id } = req.params;
     const { isApproved, comment, rejectionReason } = req.body;
@@ -425,12 +534,14 @@ router.post('/:id/review', verifyToken, requireRole('GUIDE', 'HOD', 'ADMIN'), as
     }
 
     const isAssignedGuide = project.group.guideId === req.user.userId;
+    const isCoordinatorOfDept = req.user.roles.includes('COORDINATOR') &&
+      project.group.departmentId === req.user.departmentId;
     const isHODOfDept = req.user.roles.includes('HOD') &&
       project.group.departmentId === req.user.departmentId;
     const isAdmin = req.user.roles.includes('ADMIN');
 
-    if (!isAssignedGuide && !isHODOfDept && !isAdmin) {
-      return res.status(403).json({ error: 'Only the assigned guide, HOD, or admin can review this project' });
+    if (!isAssignedGuide && !isCoordinatorOfDept && !isHODOfDept && !isAdmin) {
+      return res.status(403).json({ error: 'Only the assigned guide, coordinator, HOD, or admin can review this project' });
     }
 
     if (!['SUBMITTED', 'UNDER_REVIEW'].includes(project.status)) {
@@ -478,7 +589,7 @@ router.post('/:id/review', verifyToken, requireRole('GUIDE', 'HOD', 'ADMIN'), as
 //   Guide: can publish their own group's project
 //   HOD/ADMIN: can publish any project in scope
 // ═══════════════════════════════════════════════════════
-router.patch('/:id/publish', verifyToken, requireRole('GUIDE', 'HOD', 'ADMIN'), async (req, res, next) => {
+router.patch('/:id/publish', verifyToken, requireRole('GUIDE', 'COORDINATOR', 'HOD', 'ADMIN'), async (req, res, next) => {
   try {
     const { id } = req.params;
     const roles = req.user.roles;
@@ -492,8 +603,8 @@ router.patch('/:id/publish', verifyToken, requireRole('GUIDE', 'HOD', 'ADMIN'), 
       return res.status(404).json({ error: 'Project not found' });
     }
 
-    // Guide must be assigned to this group; HOD/ADMIN bypass this check
-    if (roles.includes('GUIDE') && !roles.includes('HOD') && !roles.includes('ADMIN')) {
+    // Guide must be assigned to this group; Coordinator/HOD/ADMIN bypass this check
+    if (roles.includes('GUIDE') && !roles.includes('COORDINATOR') && !roles.includes('HOD') && !roles.includes('ADMIN')) {
       if (project.group.guideId !== req.user.userId) {
         return res.status(403).json({ error: 'You are not the assigned guide for this project' });
       }

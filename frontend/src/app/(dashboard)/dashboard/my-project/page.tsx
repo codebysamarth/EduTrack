@@ -248,6 +248,9 @@ export default function MyProjectPage() {
             )}
             {project.status === 'SUBMITTED' && <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 text-blue-400 text-sm">Submitted — Waiting for guide review</div>}
             {project.status === 'UNDER_REVIEW' && <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-amber-400 text-sm">Guide is currently reviewing your project</div>}
+            {(project.status === 'SUBMITTED' || project.status === 'UNDER_REVIEW' || project.status === 'APPROVED' || project.status === 'COMPLETED') && isLeader && (
+              <button onClick={openEditDialog} className="border border-[#2A3A5C] text-[#7A8BAF] hover:bg-[#1A2540] hover:text-[#EEF2FF] px-4 py-2 rounded-xl transition-all duration-200 text-sm mt-3">Edit Project</button>
+            )}
             {project.status === 'APPROVED' && <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-3 text-green-400 text-sm">Approved! 🎉 Your guide will publish this project soon.</div>}
             {project.status === 'PUBLISHED' && (
               <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-emerald-400 text-sm flex items-center justify-between">

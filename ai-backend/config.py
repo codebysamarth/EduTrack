@@ -3,8 +3,17 @@ import os
 
 load_dotenv()
 
+# ─── LLM Provider ────────────────────────────────────
+LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "openai")  # "openai" or "ollama"
+
+# ─── OpenAI ───────────────────────────────────────
+OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+
+# ─── Ollama ───────────────────────────────────────
 OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "llama3.2")
+OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "llama3:8b")
+
 NODE_BACKEND_URL: str = os.getenv("NODE_BACKEND_URL", "http://localhost:5000")
 DATABASE_URL: str = os.getenv("DATABASE_URL", "")
 PORT: int = int(os.getenv("PORT", "8000"))

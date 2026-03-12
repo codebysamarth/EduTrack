@@ -14,6 +14,7 @@ import {
   MessageCircle,
   UserCheck,
   GraduationCap,
+  Upload,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import type { RoleName } from '@/types'
@@ -58,9 +59,13 @@ function getNavItems(highestRole: RoleName): { href: string; label: string; icon
       break
     case 'COORDINATOR':
       items.push({ href: '/dashboard/coordinator', label: 'Dashboard', icon: LayoutDashboard })
+      items.push({ href: '/dashboard/coordinator/projects', label: 'All Projects', icon: FolderOpen })
+      items.push({ href: '/dashboard/coordinator/bulk-upload', label: 'Bulk Upload', icon: Upload })
       break
     case 'GUIDE':
       items.push({ href: '/dashboard/guide', label: 'Dashboard', icon: LayoutDashboard })
+      items.push({ href: '/dashboard/guide/projects', label: 'All Projects', icon: FolderOpen })
+      items.push({ href: '/dashboard/guide/bulk-upload', label: 'Bulk Upload', icon: Upload })
       break
     default:
       items.push({ href: '/dashboard/student', label: 'Dashboard', icon: LayoutDashboard })
@@ -227,6 +232,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           isOpen={chatOpen}
           onClose={() => setChatOpen(false)}
           userRole={roles[0] ?? 'STUDENT'}
+          user={user}
         />
       </AnimatePresence>
     </div>

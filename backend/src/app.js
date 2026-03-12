@@ -31,6 +31,7 @@ app.use('/api/groups', require('./routes/groups'));
 app.use('/api/projects', require('./routes/projects'));
 app.use('/api/showcase', require('./routes/showcase'));
 app.use('/api/export', require('./routes/export'));
+app.use('/api/bulk-upload', require('./routes/bulkUpload'));
 
 // 404 handler
 app.use((req, res) => {

@@ -1,8 +1,9 @@
 import httpx
+import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from config import OLLAMA_BASE_URL, OLLAMA_MODEL, PORT
+from config import OPENAI_MODEL, OLLAMA_MODEL, LLM_PROVIDER, PORT
 from schemas import ChatRequest, ChatResponse, ActionRequest, ActionResponse, HealthResponse
 from graph.orchestrator import compiled_graph, get_llm
 from tools.google_workspace import check_gmail_connected, send_email
@@ -23,26 +24,28 @@ app.add_middleware(
 
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
-    """Check Ollama connectivity + Gmail OAuth status."""
-    ollama_ok = False
+    """Check LLM connectivity + Gmail OAuth status."""
+    llm_ok = False
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            r = await client.get(f"{OLLAMA_BASE_URL}/api/tags")
-            ollama_ok = r.status_code == 200
+        llm = get_llm()
+        from langchain_core.messages import HumanMessage
+        resp = await llm.ainvoke([HumanMessage(content="ping")])
+        llm_ok = bool(resp.content)
     except Exception:
         pass
 
     gmail_ok = check_gmail_connected()
 
-    status = "healthy" if ollama_ok else "degraded"
-    message = "All systems operational" if (ollama_ok and gmail_ok) else (
-        "Ollama not reachable" if not ollama_ok else "Gmail not connected"
+    model_name = OLLAMA_MODEL if LLM_PROVIDER == "ollama" else OPENAI_MODEL
+    status = "healthy" if llm_ok else "degraded"
+    message = "All systems operational" if (llm_ok and gmail_ok) else (
+        f"LLM ({LLM_PROVIDER}) not reachable" if not llm_ok else "Gmail not connected"
     )
 
     return HealthResponse(
         status=status,
-        model=OLLAMA_MODEL,
-        ollamaConnected=ollama_ok,
+        model=model_name,
+        openaiConnected=llm_ok,
         gmailConnected=gmail_ok,
         message=message,
     )
@@ -168,5 +171,4 @@ def read_root():
 # ─── Entry point ─────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=PORT, reload=True)

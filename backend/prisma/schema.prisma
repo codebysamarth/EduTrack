@@ -40,6 +40,18 @@ enum FF180Status {
   APPROVED
 }
 
+enum GroupStatus {
+  FORMING
+  PENDING_APPROVAL
+  APPROVED
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
 // ─── MODELS ──────────────────────────────────────────────
 
 model User {
@@ -60,6 +72,7 @@ model User {
   reviews           ProjectReview[]
   auditLogs         AuditLog[]
   groupMembers      GroupMember[]
+  groupInvitations  GroupInvitation[]
 }
 
 model Role {
@@ -130,7 +143,7 @@ model FacultyProfile {
 }
 
 model Group {
-  id            String   @id @default(cuid())
+  id            String      @id @default(cuid())
   name          String
   departmentId  String
   year          Year
@@ -139,13 +152,15 @@ model Group {
   coordinatorId String?
   academicYear  String
   semester      Int
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  status        GroupStatus  @default(APPROVED)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
-  department  Department   @relation(fields: [departmentId], references: [id])
-  guide       User?        @relation("GuideGroups", fields: [guideId], references: [id])
-  coordinator User?        @relation("CoordinatorGroups", fields: [coordinatorId], references: [id])
+  department  Department       @relation(fields: [departmentId], references: [id])
+  guide       User?            @relation("GuideGroups", fields: [guideId], references: [id])
+  coordinator User?            @relation("CoordinatorGroups", fields: [coordinatorId], references: [id])
   members     GroupMember[]
+  invitations GroupInvitation[]
   project     Project?
 
   @@index([departmentId, year])
@@ -163,6 +178,21 @@ model GroupMember {
   student User  @relation(fields: [studentId], references: [id])
 
   @@unique([groupId, studentId])
+}
+
+model GroupInvitation {
+  id        String           @id @default(cuid())
+  groupId   String
+  studentId String
+  status    InvitationStatus @default(PENDING)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  group   Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  student User  @relation(fields: [studentId], references: [id])
+
+  @@unique([groupId, studentId])
+  @@index([studentId, status])
 }
 
 model Project {

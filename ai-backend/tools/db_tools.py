@@ -140,6 +140,56 @@ async def get_my_projects(token: str) -> dict:
         return {"success": False, "data": [], "statusCounts": {}, "error": str(e)}
 
 
+async def get_all_departments(token: str) -> dict:
+    """Fetch all departments with HOD info and counts."""
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            r = await client.get(
+                f"{NODE_BACKEND_URL}/api/departments",
+                headers=_auth_headers(token),
+            )
+            r.raise_for_status()
+            data = r.json()
+            depts = data if isinstance(data, list) else []
+            return {"success": True, "data": depts, "count": len(depts), "error": None}
+    except Exception as e:
+        return {"success": False, "data": [], "count": 0, "error": str(e)}
+
+
+async def get_department_detail(dept_id: str, token: str) -> dict:
+    """Fetch department detail with HOD, coordinators, guides."""
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            r = await client.get(
+                f"{NODE_BACKEND_URL}/api/departments/{dept_id}",
+                headers=_auth_headers(token),
+            )
+            r.raise_for_status()
+            return {"success": True, "data": r.json(), "error": None}
+    except Exception as e:
+        return {"success": False, "data": {}, "error": str(e)}
+
+
+async def get_faculty(department_id: str, token: str) -> dict:
+    """Fetch faculty in a department."""
+    try:
+        params = {}
+        if department_id:
+            params["departmentId"] = department_id
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            r = await client.get(
+                f"{NODE_BACKEND_URL}/api/users/faculty",
+                params=params,
+                headers=_auth_headers(token),
+            )
+            r.raise_for_status()
+            data = r.json()
+            faculty = data if isinstance(data, list) else data.get("users", data)
+            return {"success": True, "data": faculty, "count": len(faculty), "error": None}
+    except Exception as e:
+        return {"success": False, "data": [], "count": 0, "error": str(e)}
+
+
 async def post_project_review(
     project_id: str,
     is_approved: bool,

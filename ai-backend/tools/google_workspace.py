@@ -59,7 +59,9 @@ def get_google_credentials():
             flow = InstalledAppFlow.from_client_secrets_file(
                 GOOGLE_CLIENT_SECRET_PATH, GOOGLE_SCOPES
             )
-            creds = flow.run_local_server(port=0)
+            # Fixed port so Google Console redirect URI can match:
+            # http://localhost:8090/
+            creds = flow.run_local_server(port=8090)
 
         with open(GOOGLE_TOKEN_PATH, "w") as token:
             token.write(creds.to_json())

@@ -32,7 +32,7 @@ export default function ProjectIdeasPage() {
   const { roles } = useAuth()
   const router = useRouter()
   const [domain, setDomain] = useState('')
-  const [sdg, setSdg] = useState('')
+  const [selectedSdgs, setSelectedSdgs] = useState<number[]>([])
   const [extra, setExtra] = useState('')
   const [showResult, setShowResult] = useState(false)
   const [template, setTemplate] = useState('')
@@ -44,9 +44,9 @@ export default function ProjectIdeasPage() {
 
   const handleGenerate = () => {
     let t = `Generate 5 innovative engineering project ideas in the domain of ${domain}.\n\nRequirements for each project idea:\n- The project should be suitable for publishing in a research journal OR be patentable\n- Must be feasible for undergraduate engineering students to build in one semester\n- For each idea, provide:\n    • Project Title\n    • Problem Statement (2-3 sentences)\n    • Proposed Solution & Approach\n    • Tech Stack / Tools Required\n    • Short Abstract (50 words max)\n    • Why it is innovative or impactful`
-    if (sdg) {
-      const goal = SDG_GOALS.find(g => g.n === parseInt(sdg))
-      if (goal) t += `\n- All ideas must align with UN Sustainable Development Goal ${goal.n}: ${goal.name}`
+    if (selectedSdgs.length > 0) {
+      const goals = selectedSdgs.map(n => { const g = SDG_GOALS.find(sg => sg.n === n); return g ? `${g.n}: ${g.name}` : '' }).filter(Boolean).join(', ')
+      t += `\n- All ideas must align with UN Sustainable Development Goal(s): ${goals}`
     }
     if (extra.trim()) t += `\n- Additional requirements: ${extra.trim()}`
     t += '\n\nFormat as a numbered list (1-5) with clear headings for each section.'
@@ -61,7 +61,7 @@ export default function ProjectIdeasPage() {
   }
 
   const handleReset = () => {
-    setDomain(''); setSdg(''); setExtra(''); setShowResult(false); setTemplate('')
+    setDomain(''); setSelectedSdgs([]); setExtra(''); setShowResult(false); setTemplate('')
   }
 
   const handlePopular = (chip: string) => {
@@ -109,10 +109,17 @@ export default function ProjectIdeasPage() {
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#1A2540] text-[#4A5B7A] border border-[#2A3A5C]">Optional</span>
               </div>
               <p className="text-xs text-[#4A5B7A] mb-2">Aligning with a UN SDG goal can strengthen your project&apos;s impact</p>
-              <select value={sdg} onChange={e => setSdg(e.target.value)} className="w-full px-3 py-2.5 bg-[#1A2540] border border-[#2A3A5C] rounded-xl text-sm text-[#EEF2FF] focus:border-amber-500 focus:outline-none">
-                <option value="">None (no SDG alignment)</option>
-                {SDG_GOALS.map(g => <option key={g.n} value={g.n}>{g.n} — {g.name}</option>)}
-              </select>
+              <div className="flex flex-wrap gap-2">
+                {SDG_GOALS.map(g => {
+                  const active = selectedSdgs.includes(g.n)
+                  return (
+                    <button key={g.n} type="button" onClick={() => setSelectedSdgs(prev => active ? prev.filter(x => x !== g.n) : [...prev, g.n])}
+                      className={`px-3 py-1.5 rounded-full text-xs border transition-all duration-200 ${active ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 'bg-[#1A2540] text-[#7A8BAF] border-[#2A3A5C] hover:border-amber-500/30 hover:text-amber-400'}`}>
+                      {g.n}. {g.name}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
             {/* Extra */}
             <div>

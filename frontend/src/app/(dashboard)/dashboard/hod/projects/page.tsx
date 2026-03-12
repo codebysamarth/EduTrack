@@ -12,6 +12,8 @@ import {
   Loader2,
   Eye,
   Globe,
+  Zap,
+  AlertTriangle,
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
@@ -79,6 +81,8 @@ export default function HodProjectsPage() {
   // Detail dialog
   const [detailProject, setDetailProject] = useState<ProjectDetail | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
+  const [simResult, setSimResult] = useState<{isUnique:boolean;similarProjects:{id:string;title:string;domain:string;groupName:string;similarity:number}[]}|null>(null)
+  const [simLoading, setSimLoading] = useState(false)
 
   // Publish confirmation
   const [publishTarget, setPublishTarget] = useState<ProjectData | null>(null)
@@ -127,11 +131,25 @@ export default function HodProjectsPage() {
   const openDetail = async (p: ProjectData) => {
     setDetailLoading(true)
     setDetailProject(null)
+    setSimResult(null)
     try {
       const res = await api.get(`/projects/${p.id}`)
       setDetailProject(res.data)
     } catch { /* */ }
     setDetailLoading(false)
+  }
+
+  const handleCheckSimilarity = async (p: ProjectDetail) => {
+    setSimLoading(true)
+    setSimResult(null)
+    try {
+      const res = await api.post('/projects/check-similarity', {
+        title: p.title, abstract: p.abstract || '', domain: p.domain || '',
+        excludeGroupId: p.group?.id,
+      })
+      setSimResult(res.data)
+    } catch { /* */ }
+    setSimLoading(false)
   }
 
   const handlePublish = async () => {
@@ -398,6 +416,64 @@ export default function HodProjectsPage() {
                       </div>
                     </>
                   )}
+
+                  {/* ── Similarity Check ── */}
+                  <div className="mt-5 pt-4 border-t border-[#2A3A5C]">
+                    <button
+                      onClick={() => handleCheckSimilarity(detailProject)}
+                      disabled={simLoading}
+                      className="w-full py-2 border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 rounded-xl transition-all duration-200 text-sm flex items-center justify-center gap-2 disabled:opacity-60"
+                    >
+                      {simLoading ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
+                      Check Project Uniqueness
+                    </button>
+                    {simResult && (
+                      <div className={`mt-3 rounded-xl p-3 ${simResult.isUnique ? 'bg-green-500/10 border border-green-500/20' : 'bg-amber-500/10 border border-amber-500/30'}`}>
+                        {simResult.isUnique ? (
+                          <p className="text-green-400 text-xs flex items-center gap-1">✓ This project appears unique — no similar projects found.</p>
+                        ) : (
+                          <>
+                            <p className="text-amber-400 text-xs font-medium mb-2 flex items-center gap-1"><AlertTriangle size={12} />{simResult.similarProjects.length} similar project(s) found</p>
+                            {simResult.similarProjects.map((sp: { id: string; title: string; groupName?: string; domain?: string; similarity: number; titleSimilarity?: number; abstractSimilarity?: number; commonTerms?: string[] }) => (
+                              <div key={sp.id} className="bg-[#1A2540] border border-[#2A3A5C] rounded-lg px-3 py-2 mb-1.5 space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <p className="text-xs text-[#EEF2FF] font-medium">{sp.title}</p>
+                                    <p className="text-[10px] text-[#4A5B7A] mt-0.5">{sp.groupName && `Group: ${sp.groupName}`}{sp.domain && ` · ${sp.domain}`}</p>
+                                  </div>
+                                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ml-2 shrink-0 ${sp.similarity >= 70 ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
+                                    {sp.similarity}% match
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-3 text-[10px]">
+                                  {sp.titleSimilarity !== undefined && (
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-[#4A5B7A]">Title:</span>
+                                      <div className="w-12 h-1 bg-[#0F1729] rounded-full overflow-hidden"><div className={`h-full rounded-full ${sp.titleSimilarity >= 70 ? 'bg-red-400' : sp.titleSimilarity >= 40 ? 'bg-amber-400' : 'bg-green-400'}`} style={{width: `${sp.titleSimilarity}%`}}/></div>
+                                      <span className={sp.titleSimilarity >= 70 ? 'text-red-400' : sp.titleSimilarity >= 40 ? 'text-amber-400' : 'text-green-400'}>{sp.titleSimilarity}%</span>
+                                    </div>
+                                  )}
+                                  {sp.abstractSimilarity !== undefined && (
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-[#4A5B7A]">Abstract:</span>
+                                      <div className="w-12 h-1 bg-[#0F1729] rounded-full overflow-hidden"><div className={`h-full rounded-full ${sp.abstractSimilarity >= 70 ? 'bg-red-400' : sp.abstractSimilarity >= 40 ? 'bg-amber-400' : 'bg-green-400'}`} style={{width: `${sp.abstractSimilarity}%`}}/></div>
+                                      <span className={sp.abstractSimilarity >= 70 ? 'text-red-400' : sp.abstractSimilarity >= 40 ? 'text-amber-400' : 'text-green-400'}>{sp.abstractSimilarity}%</span>
+                                    </div>
+                                  )}
+                                </div>
+                                {sp.commonTerms && sp.commonTerms.length > 0 && (
+                                  <div className="flex flex-wrap gap-0.5">
+                                    <span className="text-[#4A5B7A] text-[10px] mr-0.5">Common:</span>
+                                    {sp.commonTerms.map((term: string, i: number)=>(<span key={i} className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1 py-0 rounded">{term}</span>))}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </>
               )}
             </motion.div>

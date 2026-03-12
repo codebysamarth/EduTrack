@@ -33,6 +33,6 @@ class ChatResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     model: str
-    ollamaConnected: bool
+    openaiConnected: bool
     gmailConnected: bool
     message: str

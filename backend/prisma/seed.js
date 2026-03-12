@@ -81,13 +81,11 @@ async function main() {
       create: { email: f.email, password: pw, name: f.name, isApproved: true },
     });
     await prisma.facultyProfile.upsert({
-      where: { prnNo: f.prnNo }, update: {},
+      where: { prnNo: f.prnNo },
+      update: { userId: user.id, employeeId: f.empId, departmentId: dept[f.dept].id, designation: f.designation },
       create: { userId: user.id, prnNo: f.prnNo, employeeId: f.empId, departmentId: dept[f.dept].id, designation: f.designation },
     });
     await ensureUserRole(user.id, roles[f.role].id, dept[f.dept].id, f.year);
-    if (f.role === 'HOD') {
-      await prisma.facultyProfile.update({ where: { userId: user.id }, data: { departmentId: dept[f.dept].id } });
-    }
     fac[f.prnNo] = user;
     console.log(`  ✓ [${f.role.padEnd(11)}] ${f.name}`);
   }
@@ -204,7 +202,8 @@ async function main() {
       create: { email: s.email, password: pw, name: s.name, isApproved: true },
     });
     await prisma.studentProfile.upsert({
-      where: { prnNo: s.prnNo }, update: {},
+      where: { prnNo: s.prnNo },
+      update: { userId: user.id, enrollmentNo: s.enrl, departmentId: dept[s.dept].id, year: s.year, division: s.div },
       create: { userId: user.id, prnNo: s.prnNo, enrollmentNo: s.enrl, departmentId: dept[s.dept].id, year: s.year, division: s.div },
     });
     await ensureUserRole(user.id, roles.STUDENT.id, dept[s.dept].id);

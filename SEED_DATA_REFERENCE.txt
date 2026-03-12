@@ -4,6 +4,42 @@
 ╚══════════════════════════════════════════════════════════════════════════════╝
 
 ════════════════════════════════════════════════════════════════════════════════
+  DATABASE SCHEMA (Key Models & Enums)
+════════════════════════════════════════════════════════════════════════════════
+
+  Roles:   STUDENT | GUIDE | COORDINATOR | HOD | ADMIN
+  Years:   FY | SY | TY | FINAL
+
+  ProjectStatus:    DRAFT → SUBMITTED → UNDER_REVIEW → REJECTED → APPROVED → COMPLETED → PUBLISHED
+  GroupStatus:       FORMING → PENDING_APPROVAL → APPROVED
+  FF180Status:       PENDING → SUBMITTED → APPROVED
+  InvitationStatus:  PENDING → ACCEPTED → DECLINED
+
+  Key Models:
+  ─ User:            id, email, password, name, phone, isApproved
+  ─ Role:            ADMIN, HOD, COORDINATOR, GUIDE, STUDENT
+  ─ UserRole:        userId + roleId + departmentId + year (scoped role assignment)
+  ─ Department:      id, name, code (CSE, IT, ME, ENTC)
+  ─ StudentProfile:  userId, prnNo, enrollmentNo, departmentId, year, division
+  ─ FacultyProfile:  userId, prnNo, employeeId, departmentId, designation
+  ─ Group:           name, departmentId, year, division, guideId, coordinatorId, status, academicYear, semester
+  ─ GroupMember:     groupId + studentId + isLeader
+  ─ GroupInvitation:  groupId + studentId + status (PENDING/ACCEPTED/DECLINED)
+  ─ Project:         groupId, departmentId, title, abstract, sdgGoals[], domain, techStack, status,
+                     githubLink, videoLink, driveLink, researchPaperLink, patentLink,
+                     ff180Status, isPublished, publishedAt
+  ─ ProjectReview:   projectId, reviewerId, comment, isApproved, rejectionReason
+  ─ AuditLog:        userId, action, entityType, entityId, metadata
+
+  Relationships:
+  ─ User   has many roles via UserRole (scoped to department + year)
+  ─ User   has optional StudentProfile OR FacultyProfile
+  ─ Group  belongs to Department, has optional Guide and Coordinator (User refs)
+  ─ Group  has many GroupMembers (students) and GroupInvitations
+  ─ Group  has one optional Project (1:1)
+  ─ Project has many ProjectReviews
+
+════════════════════════════════════════════════════════════════════════════════
   ADMIN
 ════════════════════════════════════════════════════════════════════════════════
   Name:     Samarth Pawar
@@ -185,7 +221,7 @@
   Smita Waghmare     smita.waghmare24@college.edu     21EC008   EN21EC008     B
 
 ════════════════════════════════════════════════════════════════════════════════
-  GROUPS & PROJECTS (21 groups)
+  GROUPS & PROJECTS (20 groups)
 ════════════════════════════════════════════════════════════════════════════════
 
 ── CSE Groups ───────────────────────────────────────────────────────────────
@@ -364,3 +400,47 @@
   • ✦ = Published to showcase
   • Reviews are auto-created for APPROVED/COMPLETED/PUBLISHED/UNDER_REVIEW projects
   • Audit logs created for HOD assignments
+  • All seeded groups have GroupStatus = APPROVED (default)
+  • GroupInvitations are NOT seeded — students are added directly as GroupMembers
+  • FF180Status for APPROVED/COMPLETED/PUBLISHED projects = APPROVED, others = PENDING
+  • Published projects have publishedAt = 2026-01-15
+
+════════════════════════════════════════════════════════════════════════════════
+  QUICK TEST LOGINS
+════════════════════════════════════════════════════════════════════════════════
+  Role          Email                                   Password
+  ADMIN         pawarsamarth786@gmail.com               12345678
+  HOD (CSE)     rajesh.kulkarni24@college.edu            12345678
+  HOD (IT)      pramod.sharma24@college.edu              12345678
+  COORD (CSE)   sunita.deshpande24@college.edu           12345678
+  COORD (IT)    kavita.jadhav24@college.edu              12345678
+  GUIDE (CSE)   sneha.joshi24@college.edu                12345678
+  GUIDE (IT)    nitin.wagh24@college.edu                 12345678
+  STUDENT (CSE) aarav.patil24@college.edu                12345678
+  STUDENT (IT)  arjun.naik24@college.edu                 12345678
+
+════════════════════════════════════════════════════════════════════════════════
+  TESTING WORKFLOWS
+════════════════════════════════════════════════════════════════════════════════
+  1. Student self-creates group:
+     Login as a student NOT in any group → Create Group → Send invitations → Members accept
+     Coordinator approves group → Group status: FORMING → PENDING_APPROVAL → APPROVED
+
+  2. Project submission flow:
+     Student creates project (DRAFT) → Fills details → Submits (SUBMITTED)
+     Guide reviews → UNDER_REVIEW → APPROVED/REJECTED
+     Guide marks COMPLETED → HOD/Admin publishes (PUBLISHED)
+
+  3. Email sending (AI chat):
+     Login as Guide/Coordinator/HOD → Open chat → "Draft email to my group about..."
+     View recipients list → Click Send Email → Gmail OAuth sends real email
+
+  4. HOD department view:
+     Login as HOD → See all groups/projects in department → Assign coordinators
+
+  5. Admin overview:
+     Login as Admin → See all departments → All faculty → All projects across college
+
+  ME STUDENTS NOT IN GROUPS (available for group formation testing):
+  ─ ME TY A: Sandesh Tupe, Pranali Devkar, Vivek Ghuge, Rucha Kolhe, Swapnil Nikam, Apurva Gawand
+  ─ ENTC TY A: Nikhil Bodke, Shivani Rathod (not in ENTC-TY-A-G1)

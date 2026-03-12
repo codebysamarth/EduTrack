@@ -13,6 +13,8 @@ export type ProjectStatus =
   | 'COMPLETED'
   | 'PUBLISHED'
 export type FF180Status = 'PENDING' | 'SUBMITTED' | 'APPROVED'
+export type GroupStatus = 'FORMING' | 'PENDING_APPROVAL' | 'APPROVED'
+export type InvitationStatus = 'PENDING' | 'ACCEPTED' | 'DECLINED'
 
 export interface User {
   id: string
@@ -77,7 +79,9 @@ export interface Group {
   coordinator?: User
   academicYear: string
   semester: number
+  status?: GroupStatus
   members?: GroupMember[]
+  invitations?: GroupInvitationInfo[]
   project?: Project
   createdAt: string
 }
@@ -88,6 +92,29 @@ export interface GroupMember {
   studentId: string
   isLeader: boolean
   student?: User
+}
+
+export interface GroupInvitationInfo {
+  id: string
+  status: InvitationStatus
+  student: { id: string; name: string; prnNo?: string }
+}
+
+export interface PendingInvitation {
+  id: string
+  groupId: string
+  status: InvitationStatus
+  createdAt: string
+  group: {
+    id: string
+    name: string
+    year: Year
+    division: string
+    academicYear: string
+    department?: Department
+    membersCount: number
+    leader?: { id: string; name: string }
+  }
 }
 
 export interface Project {
