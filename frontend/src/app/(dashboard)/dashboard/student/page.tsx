@@ -79,7 +79,12 @@ export default function StudentPage() {
   const [inviting, setInviting] = useState(false)
   const [pendingInvitations, setPendingInvitations] = useState<PendingInvitation[]>([])
   const [respondingInvId, setRespondingInvId] = useState('')
-  const [similarityWarning, setSimilarityWarning] = useState<{message:string;similarProjects:{id:string;title:string;domain:string;groupName:string;similarity:number}[]}|null>(null)
+  const [similarityResult, setSimilarityResult] = useState<{
+    isUnique: boolean;
+    checkedAt: Date;
+    title: string;
+    similarProjects: { id: string; title: string; abstract?: string; domain?: string; groupName?: string; similarity: number; titleSimilarity?: number; abstractSimilarity?: number; commonTerms?: string[] }[];
+  } | null>(null)
   const [checkingSimilarity, setCheckingSimilarity] = useState(false)
 
   useEffect(() => { if (!roles.includes('STUDENT')) router.replace('/dashboard') }, [roles, router])
@@ -108,8 +113,13 @@ export default function StudentPage() {
       if (createForm.sdgGoals.length>0) body.sdgGoals = createForm.sdgGoals.map(String)
       const res = await api.post('/projects', body)
       if (res.data.similarityWarning) {
-        setSimilarityWarning(res.data.similarityWarning)
-        toast.warning('Similar projects detected — review the warning below')
+        setSimilarityResult({
+          isUnique: false,
+          checkedAt: new Date(),
+          title: createForm.title,
+          similarProjects: res.data.similarityWarning.similarProjects || [],
+        })
+        toast.warning('Similar projects detected — review below')
       }
       setShowCreateDialog(false); setCreateForm({title:'',abstract:'',domain:'',techStack:'',githubLink:'',sdgGoals:[]}); await fetchData()
     } catch {}
@@ -129,8 +139,13 @@ export default function StudentPage() {
     try {
       const res = await api.post(`/projects/${project.id}/submit`)
       if (res.data.similarityWarning) {
-        setSimilarityWarning(res.data.similarityWarning)
-        toast.warning('Similar projects found — see warning below')
+        setSimilarityResult({
+          isUnique: false,
+          checkedAt: new Date(),
+          title: project.title,
+          similarProjects: res.data.similarityWarning.similarProjects || [],
+        })
+        toast.warning('Similar projects found — see report below')
       }
       await fetchData()
     } catch {}
@@ -150,11 +165,15 @@ export default function StudentPage() {
     setCheckingSimilarity(true)
     try {
       const res = await api.post('/projects/check-similarity', { title, abstract: abstract||'', domain: domain||'', excludeGroupId: group?.id })
+      setSimilarityResult({
+        isUnique: res.data.isUnique,
+        checkedAt: new Date(),
+        title,
+        similarProjects: res.data.similarProjects || [],
+      })
       if (res.data.isUnique) {
         toast.success('Your project appears unique!')
-        setSimilarityWarning(null)
       } else {
-        setSimilarityWarning({ message: 'Similar projects detected. Consider differentiating your project.', similarProjects: res.data.similarProjects })
         toast.warning(`${res.data.similarProjects.length} similar project(s) found`)
       }
     } catch { toast.error('Failed to check similarity') }
@@ -563,41 +582,67 @@ export default function StudentPage() {
                 </div>}
               </div>
 
-              {/* Similarity Warning */}
-              {similarityWarning && (
-                <div className="mt-4 bg-amber-500/10 border border-amber-500/30 rounded-xl p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2 text-amber-400 text-sm font-medium"><AlertTriangle size={14}/>{similarityWarning.message}</div>
-                    <button onClick={()=>setSimilarityWarning(null)} className="text-[#4A5B7A] hover:text-[#7A8BAF]"><X size={14}/></button>
+              {/* Similarity Report */}
+              {similarityResult && (
+                <div className={`mt-4 rounded-xl p-4 border ${similarityResult.isUnique ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-amber-500/10 border-amber-500/30'}`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      {similarityResult.isUnique ? (
+                        <><CheckCircle2 size={18} className="text-emerald-400"/><span className="text-emerald-400 font-medium">Project Appears Unique</span></>
+                      ) : (
+                        <><AlertTriangle size={18} className="text-amber-400"/><span className="text-amber-400 font-medium">{similarityResult.similarProjects.length} Similar Project{similarityResult.similarProjects.length>1?'s':''} Found</span></>
+                      )}
+                    </div>
+                    <button onClick={()=>setSimilarityResult(null)} className="text-[#4A5B7A] hover:text-[#7A8BAF]"><X size={14}/></button>
                   </div>
-                  <div className="space-y-3">
-                    {similarityWarning.similarProjects.map((sp: { id: string; title: string; abstract?: string; groupName?: string; domain?: string; similarity: number; titleSimilarity?: number; abstractSimilarity?: number; commonTerms?: string[] })=>(
-                      <div key={sp.id} className="bg-[#1A2540] border border-[#2A3A5C] rounded-lg p-3 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm text-[#EEF2FF] font-medium">{sp.title}</p>
-                            <p className="text-xs text-[#4A5B7A] mt-0.5">
-                              {sp.groupName && <span>Group: {sp.groupName}</span>}
-                              {sp.domain && <span className="ml-2">• {sp.domain}</span>}
-                            </p>
+                  
+                  {similarityResult.isUnique ? (
+                    <div className="bg-[#1A2540] border border-[#2A3A5C] rounded-lg p-4">
+                      <p className="text-sm text-[#EEF2FF] mb-2">Great news! No similar projects were found in the database.</p>
+                      <div className="text-xs text-[#7A8BAF] space-y-1">
+                        <p>✓ Checked against all existing projects</p>
+                        <p>✓ Title and abstract analyzed using TF-IDF similarity</p>
+                        <p>✓ Domain matching considered</p>
+                      </div>
+                      <p className="text-xs text-[#4A5B7A] mt-3">Checked: {similarityResult.checkedAt.toLocaleString()}</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <p className="text-xs text-amber-300/80">Your project has similarities with existing submissions. Review below and consider differentiating your approach:</p>
+                      {similarityResult.similarProjects.map((sp) => (
+                        <div key={sp.id} className="bg-[#1A2540] border border-[#2A3A5C] rounded-lg p-3 space-y-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1">
+                              <p className="text-sm text-[#EEF2FF] font-medium">{sp.title}</p>
+                              <p className="text-xs text-[#4A5B7A] mt-0.5">
+                                {sp.groupName && <span>Group: {sp.groupName}</span>}
+                                {sp.domain && <span className="ml-2">• {sp.domain}</span>}
+                              </p>
+                            </div>
+                            <span className={`shrink-0 text-xs font-mono px-2 py-1 rounded-full border ${sp.similarity >= 70 ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
+                              {sp.similarity}% match
+                            </span>
                           </div>
-                          <span className={`text-xs font-mono px-2 py-1 rounded-full border ${sp.similarity >= 70 ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
-                            {sp.similarity}% match
-                          </span>
-                        </div>
-                        {/* Detailed similarity breakdown */}
-                        <div className="flex items-center gap-3 text-xs">
-                          {sp.titleSimilarity !== undefined && (
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[#4A5B7A]">Title:</span>
-                              <div className="w-16 h-1.5 bg-[#0F1729] rounded-full overflow-hidden">
-                                <div className={`h-full rounded-full ${sp.titleSimilarity >= 70 ? 'bg-red-400' : sp.titleSimilarity >= 40 ? 'bg-amber-400' : 'bg-green-400'}`} style={{width: `${sp.titleSimilarity}%`}}/>
-                              </div>
-                              <span className={sp.titleSimilarity >= 70 ? 'text-red-400' : sp.titleSimilarity >= 40 ? 'text-amber-400' : 'text-green-400'}>{sp.titleSimilarity}%</span>
+                          {/* Abstract excerpt */}
+                          {sp.abstract && (
+                            <div className="bg-[#0F1729] rounded-lg p-2">
+                              <p className="text-xs text-[#4A5B7A] mb-1">Abstract:</p>
+                              <p className="text-xs text-[#7A8BAF] line-clamp-3">{sp.abstract}</p>
                             </div>
                           )}
-                          {sp.abstractSimilarity !== undefined && (
-                            <div className="flex items-center gap-1.5">
+                          {/* Detailed similarity breakdown */}
+                          <div className="flex flex-wrap items-center gap-3 text-xs">
+                            {sp.titleSimilarity !== undefined && (
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[#4A5B7A]">Title:</span>
+                                <div className="w-16 h-1.5 bg-[#0F1729] rounded-full overflow-hidden">
+                                  <div className={`h-full rounded-full ${sp.titleSimilarity >= 70 ? 'bg-red-400' : sp.titleSimilarity >= 40 ? 'bg-amber-400' : 'bg-green-400'}`} style={{width: `${sp.titleSimilarity}%`}}/>
+                                </div>
+                                <span className={sp.titleSimilarity >= 70 ? 'text-red-400' : sp.titleSimilarity >= 40 ? 'text-amber-400' : 'text-green-400'}>{sp.titleSimilarity}%</span>
+                              </div>
+                            )}
+                            {sp.abstractSimilarity !== undefined && (
+                              <div className="flex items-center gap-1.5">
                               <span className="text-[#4A5B7A]">Abstract:</span>
                               <div className="w-16 h-1.5 bg-[#0F1729] rounded-full overflow-hidden">
                                 <div className={`h-full rounded-full ${sp.abstractSimilarity >= 70 ? 'bg-red-400' : sp.abstractSimilarity >= 40 ? 'bg-amber-400' : 'bg-green-400'}`} style={{width: `${sp.abstractSimilarity}%`}}/>
@@ -607,16 +652,18 @@ export default function StudentPage() {
                           )}
                         </div>
                         {sp.commonTerms && sp.commonTerms.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
-                            <span className="text-[#4A5B7A] text-xs mr-1">Common:</span>
-                            {sp.commonTerms.map((term: string, i: number)=>(
-                              <span key={i} className="text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1.5 py-0.5 rounded">{term}</span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              <span className="text-[#4A5B7A] text-xs">Overlapping terms:</span>
+                              {sp.commonTerms.map((term: string, i: number)=>(
+                                <span key={i} className="text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1.5 py-0.5 rounded">{term}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      <p className="text-xs text-[#4A5B7A] mt-2">Tip: Differentiate by focusing on a unique problem statement, different technology stack, or novel approach.</p>
+                    </div>
+                  )}
                 </div>
               )}
             </>) : (
@@ -735,15 +782,31 @@ export default function StudentPage() {
               <div><label className="block text-xs text-[#7A8BAF] mb-1.5">SDG Goals (optional)</label><div className="flex flex-wrap gap-2">{Object.entries(SDG_NAMES).map(([n,name])=>{const num=parseInt(n);const sel=createForm.sdgGoals.includes(num);return <button key={n} type="button" onClick={()=>setCreateForm(p=>({...p,sdgGoals:sel?p.sdgGoals.filter(g=>g!==num):[...p.sdgGoals,num]}))} className={`text-xs px-2 py-1 rounded-full border transition-all duration-200 ${sel?'bg-blue-500/20 text-blue-400 border-blue-500/30':'bg-[#1A2540] text-[#4A5B7A] border-[#2A3A5C] hover:text-[#7A8BAF]'}`} title={name}>{n}</button>})}</div></div>
             </div>
             <button onClick={handleCheckSimilarity} disabled={!createForm.title||checkingSimilarity} className="w-full mt-4 py-2 border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 rounded-xl transition-all duration-200 text-sm flex items-center justify-center gap-2 disabled:opacity-60">{checkingSimilarity?<Loader2 size={14} className="animate-spin"/>:<Zap size={14}/>} Check Uniqueness</button>
-            {similarityWarning && (
-              <div className="mt-3 bg-amber-500/10 border border-amber-500/30 rounded-xl p-3">
-                <p className="text-amber-400 text-xs font-medium mb-2 flex items-center gap-1"><AlertTriangle size={12}/>{similarityWarning.message}</p>
-                {similarityWarning.similarProjects.map(sp=>(
-                  <div key={sp.id} className="bg-[#1A2540] border border-[#2A3A5C] rounded-lg p-2 mb-1 flex items-center justify-between">
-                    <p className="text-xs text-[#EEF2FF] truncate flex-1">{sp.title}{sp.groupName?` (${sp.groupName})`:''}</p>
-                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full ml-2 ${sp.similarity>=70?'text-red-400 bg-red-500/10':'text-amber-400 bg-amber-500/10'}`}>{sp.similarity}%</span>
+            {similarityResult && (
+              <div className={`mt-3 rounded-xl p-3 border ${similarityResult.isUnique ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-amber-500/10 border-amber-500/30'}`}>
+                {similarityResult.isUnique ? (
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 size={14} className="text-emerald-400"/>
+                    <span className="text-emerald-400 text-xs font-medium">Your project appears unique!</span>
+                    <button onClick={()=>setSimilarityResult(null)} className="ml-auto text-[#4A5B7A] hover:text-[#7A8BAF]"><X size={12}/></button>
                   </div>
-                ))}
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-amber-400 text-xs font-medium flex items-center gap-1"><AlertTriangle size={12}/>{similarityResult.similarProjects.length} similar project(s) found</p>
+                      <button onClick={()=>setSimilarityResult(null)} className="text-[#4A5B7A] hover:text-[#7A8BAF]"><X size={12}/></button>
+                    </div>
+                    {similarityResult.similarProjects.map(sp=>(
+                      <div key={sp.id} className="bg-[#1A2540] border border-[#2A3A5C] rounded-lg p-2 mb-1">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-[#EEF2FF] truncate flex-1">{sp.title}{sp.groupName?` (${sp.groupName})`:''}</p>
+                          <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full ml-2 ${sp.similarity>=70?'text-red-400 bg-red-500/10':'text-amber-400 bg-amber-500/10'}`}>{sp.similarity}%</span>
+                        </div>
+                        {sp.abstract && <p className="text-[10px] text-[#4A5B7A] mt-1 line-clamp-2">{sp.abstract}</p>}
+                      </div>
+                    ))}
+                  </>
+                )}
               </div>
             )}
             <button onClick={showEditDialog?handleEditProject:handleCreateProject} disabled={!createForm.title||submitting} className="w-full mt-3 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-xl transition-all duration-200 text-sm flex items-center justify-center gap-2 disabled:opacity-60">{submitting?<Loader2 size={14} className="animate-spin"/>:<Plus size={14}/>}{showEditDialog?'Update Project':'Create Project'}</button>

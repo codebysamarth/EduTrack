@@ -1,7 +1,7 @@
 """
 Quick Gemini API key test — gemini-2.5-flash (free tier).
 Usage:
-  1. Set GEMINI_API_KEY in ai-backend/.env
+  1. Set GEMINI_API_KEYS in ai-backend/.env
      Get a free key at: https://aistudio.google.com/apikey
   2. Run: python test_gpt.py
 """
@@ -12,12 +12,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+_raw = os.getenv("GEMINI_API_KEYS", os.getenv("GEMINI_API_KEY", ""))
+GEMINI_API_KEY = [k.strip() for k in _raw.split(",") if k.strip()][0] if _raw else ""
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
 if not GEMINI_API_KEY:
-    print("ERROR: GEMINI_API_KEY not set. Add it to ai-backend/.env")
-    print('  GEMINI_API_KEY=your-key-here')
+    print("ERROR: GEMINI_API_KEYS not set. Add it to ai-backend/.env")
+    print('  GEMINI_API_KEYS=your-key-here')
     print("  Get a free key at: https://aistudio.google.com/apikey")
     exit(1)
 

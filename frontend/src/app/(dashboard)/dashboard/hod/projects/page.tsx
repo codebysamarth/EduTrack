@@ -14,6 +14,7 @@ import {
   Globe,
   Zap,
   AlertTriangle,
+  CheckCircle2,
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
@@ -81,7 +82,10 @@ export default function HodProjectsPage() {
   // Detail dialog
   const [detailProject, setDetailProject] = useState<ProjectDetail | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
-  const [simResult, setSimResult] = useState<{isUnique:boolean;similarProjects:{id:string;title:string;domain:string;groupName:string;similarity:number}[]}|null>(null)
+  const [simResult, setSimResult] = useState<{
+    isUnique: boolean;
+    similarProjects: { id: string; title: string; abstract?: string; domain?: string; groupName?: string; similarity: number; titleSimilarity?: number; abstractSimilarity?: number; commonTerms?: string[] }[];
+  } | null>(null)
   const [simLoading, setSimLoading] = useState(false)
 
   // Publish confirmation
@@ -428,13 +432,22 @@ export default function HodProjectsPage() {
                       Check Project Uniqueness
                     </button>
                     {simResult && (
-                      <div className={`mt-3 rounded-xl p-3 ${simResult.isUnique ? 'bg-green-500/10 border border-green-500/20' : 'bg-amber-500/10 border border-amber-500/30'}`}>
+                      <div className={`mt-3 rounded-xl p-3 ${simResult.isUnique ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-amber-500/10 border border-amber-500/30'}`}>
                         {simResult.isUnique ? (
-                          <p className="text-green-400 text-xs flex items-center gap-1">✓ This project appears unique — no similar projects found.</p>
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <CheckCircle2 size={14} className="text-emerald-400"/>
+                              <span className="text-emerald-400 text-xs font-medium">Project Appears Unique</span>
+                            </div>
+                            <div className="bg-[#1A2540] border border-[#2A3A5C] rounded-lg p-2.5">
+                              <p className="text-xs text-[#7A8BAF]">No similar projects found in the database.</p>
+                              <p className="text-[10px] text-[#4A5B7A] mt-1">✓ Analyzed title, abstract & domain using TF-IDF similarity</p>
+                            </div>
+                          </div>
                         ) : (
                           <>
                             <p className="text-amber-400 text-xs font-medium mb-2 flex items-center gap-1"><AlertTriangle size={12} />{simResult.similarProjects.length} similar project(s) found</p>
-                            {simResult.similarProjects.map((sp: { id: string; title: string; groupName?: string; domain?: string; similarity: number; titleSimilarity?: number; abstractSimilarity?: number; commonTerms?: string[] }) => (
+                            {simResult.similarProjects.map((sp) => (
                               <div key={sp.id} className="bg-[#1A2540] border border-[#2A3A5C] rounded-lg px-3 py-2 mb-1.5 space-y-1.5">
                                 <div className="flex items-center justify-between">
                                   <div>
@@ -445,6 +458,11 @@ export default function HodProjectsPage() {
                                     {sp.similarity}% match
                                   </span>
                                 </div>
+                                {sp.abstract && (
+                                  <div className="bg-[#0F1729] rounded p-1.5">
+                                    <p className="text-[10px] text-[#4A5B7A] line-clamp-2">{sp.abstract}</p>
+                                  </div>
+                                )}
                                 <div className="flex items-center gap-3 text-[10px]">
                                   {sp.titleSimilarity !== undefined && (
                                     <div className="flex items-center gap-1">
@@ -464,7 +482,7 @@ export default function HodProjectsPage() {
                                 {sp.commonTerms && sp.commonTerms.length > 0 && (
                                   <div className="flex flex-wrap gap-0.5">
                                     <span className="text-[#4A5B7A] text-[10px] mr-0.5">Common:</span>
-                                    {sp.commonTerms.map((term: string, i: number)=>(<span key={i} className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1 py-0 rounded">{term}</span>))}
+                                    {sp.commonTerms.map((term, i)=>(<span key={i} className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1 py-0 rounded">{term}</span>))}
                                   </div>
                                 )}
                               </div>
