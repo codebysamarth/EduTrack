@@ -56,13 +56,15 @@ async def run_email_agent(state: dict) -> dict:
                 "- \"Write email to ENTC-TY-A-G1 regarding...\"\n"
                 "- \"Email guide of group CSE-FIN-A-G1 about...\"\n"
                 "- \"Send email to all students about...\"\n"
-                "- \"Write email to Prof. Sanjay Pawar about...\""
+                "- \"Write email to Prof. Sanjay Pawar about...\"\n\n"
+                "_Group name format: DEPT-YEAR-DIVISION-G# (e.g., IT-FIN-A-G2, CSE-TY-B-G1)_"
             ),
             "agentUsed": "email_agent",
             "suggestedActions": [
                 "Send to my group",
-                "Send to all students in my department",
+                "Send to all students in my department", 
                 "Send to faculty",
+                "List my groups",
             ],
         }
 
@@ -144,55 +146,78 @@ def _detect_scope(message: str, context: dict, role: str) -> str:
       5. Context / role defaults
     """
     msg = message.lower()
+    print(f"🔍 DEBUG _detect_scope: message='{message}', role={role}")
 
     # Priority 0: Guide of a specific group
-    if _detect_guide_of_group(message):
+    guide_group = _detect_guide_of_group(message)
+    if guide_group:
+        print(f"🔍 DEBUG: detected GROUP_GUIDE scope for {guide_group}")
         return "GROUP_GUIDE"
 
     # Priority 1: Groups under a specific guide name
-    if _detect_guide_groups(message):
+    guide_groups = _detect_guide_groups(message)
+    if guide_groups:
+        print(f"🔍 DEBUG: detected GUIDE_GROUPS scope for {guide_groups}")
         return "GUIDE_GROUPS"
 
     # Priority 2: Specific person name
-    if _extract_target_person(message):
+    target_person = _extract_target_person(message)
+    if target_person:
+        print(f"🔍 DEBUG: detected SPECIFIC_PERSON scope for {target_person}")
         return "SPECIFIC_PERSON"
 
     # Priority 3: Specific group name pattern
-    if _extract_group_name(message):
+    group_name = _extract_group_name(message)
+    if group_name:
+        print(f"🔍 DEBUG: detected GROUP scope for {group_name}")
         return "GROUP"
 
     # Priority 4: Explicit scope keywords
     if "faculty" in msg or "teacher" in msg or "professor" in msg:
+        print(f"🔍 DEBUG: detected FACULTY scope from keywords")
         return "FACULTY"
     if "all students" in msg and ("department" in msg or "dept" in msg):
+        print(f"🔍 DEBUG: detected ALL_DEPT_STUDENTS scope from keywords")
         return "ALL_DEPT_STUDENTS"
     if "all students" in msg or "present students" in msg or "every student" in msg:
         if role == "HOD":
+            print(f"🔍 DEBUG: detected ALL_DEPT_STUDENTS scope (HOD rule)")
             return "ALL_DEPT_STUDENTS"
         if role == "COORDINATOR":
+            print(f"🔍 DEBUG: detected YEAR_STUDENTS scope (COORDINATOR rule)")
             return "YEAR_STUDENTS"
         if role == "ADMIN":
+            print(f"🔍 DEBUG: detected ALL_DEPT_STUDENTS scope (ADMIN rule)")
             return "ALL_DEPT_STUDENTS"
+        print(f"🔍 DEBUG: detected ALL_GROUPS scope (default for all students)")
         return "ALL_GROUPS"
     if ("year" in msg or "batch" in msg) and ("student" in msg or "send" in msg):
+        print(f"🔍 DEBUG: detected YEAR_STUDENTS scope from year/batch keywords")
         return "YEAR_STUDENTS"
     if "department" in msg or "dept" in msg:
+        print(f"🔍 DEBUG: detected ALL_DEPT_STUDENTS scope from department keywords")
         return "ALL_DEPT_STUDENTS"
 
     # Priority 5: Context-based
     if context.get("groupId") or "group" in msg or "team" in msg:
+        print(f"🔍 DEBUG: detected GROUP scope from context or group/team keywords")
         return "GROUP"
 
     # Default based on role
     if role == "GUIDE":
+        print(f"🔍 DEBUG: default ALL_GROUPS scope for GUIDE")
         return "ALL_GROUPS"
     if role == "COORDINATOR":
+        print(f"🔍 DEBUG: default YEAR_STUDENTS scope for COORDINATOR")
         return "YEAR_STUDENTS"
     if role == "HOD":
+        print(f"🔍 DEBUG: default ALL_DEPT_STUDENTS scope for HOD")
         return "ALL_DEPT_STUDENTS"
     if role == "ADMIN":
+        print(f"🔍 DEBUG: default ALL_DEPT_STUDENTS scope for ADMIN")
         return "ALL_DEPT_STUDENTS"
 
+    print(f"🔍 DEBUG: fallback GROUP scope")
     return "GROUP"
 
 
@@ -306,7 +331,9 @@ def _extract_target_person(message: str) -> str:
 def _extract_group_name(message: str) -> str:
     """Extract a specific group name like CSE-TY-A-G1, ENTC-FIN-B-G1 etc. from message."""
     match = _GROUP_NAME_RE.search(message)
-    return match.group(1).upper() if match else ""
+    result = match.group(1).upper() if match else ""
+    print(f"🔍 DEBUG _extract_group_name: message='{message}' -> extracted='{result}'")
+    return result
 
 
 def _extract_year(message: str) -> str:
@@ -435,6 +462,7 @@ async def _fetch_recipients(
 
     # ── GROUP ───────────────────────────────────────────
     elif scope == "GROUP":
+        print(f"🔍 DEBUG GROUP scope: message='{message}', role={role}")
         # Try specific group by ID from context
         group_id = context.get("groupId", "")
         if group_id:
@@ -448,17 +476,44 @@ async def _fetch_recipients(
         if not recipients:
             # Try to find group by name mentioned in message
             target_name = _extract_group_name(message)
+            print(f"🔍 DEBUG: extracted target_name='{target_name}'")
+            
             groups_result = await db_tools.get_my_groups(token)
+            print(f"🔍 DEBUG: get_my_groups success={groups_result['success']}, count={groups_result.get('count', 0)}")
+            
             if groups_result["success"] and groups_result["data"]:
                 matched_group = None
                 if target_name:
+                    # First try exact match (case insensitive)
                     for g in groups_result["data"]:
-                        if g.get("name", "").upper() == target_name:
+                        if g.get("name", "").upper() == target_name.upper():
                             matched_group = g
+                            print(f"🔍 DEBUG: found exact match in get_my_groups: {g.get('name', '')}")
                             break
+                    
+                    # If no exact match and user has high privileges, try department search
+                    if not matched_group and role in ("ADMIN", "HOD", "COORDINATOR"):
+                        print(f"🔍 DEBUG: no exact match, trying search_all_groups for {role}")
+                        # For high-privilege users, try to find the group using expanded search
+                        dept_id = context.get("departmentId", "")
+                        if role in ("ADMIN", "HOD"):
+                            try:
+                                search_result = await db_tools.search_all_groups(
+                                    token, 
+                                    group_name=target_name, 
+                                    department_id=dept_id if role == "HOD" else ""
+                                )
+                                print(f"🔍 DEBUG: search_all_groups success={search_result['success']}, count={search_result.get('count', 0)}")
+                                if search_result["success"] and search_result["data"]:
+                                    matched_group = search_result["data"][0]
+                                    print(f"🔍 DEBUG: found match in search_all_groups: {matched_group.get('name', '')}")
+                            except Exception as e:
+                                print(f"❌ DEBUG: search_all_groups exception: {e}")
+                
                 # Only fall back to first group when NO specific name was mentioned
                 if not matched_group and not target_name:
                     matched_group = groups_result["data"][0]
+                
                 if matched_group:
                     gid = matched_group.get("id", "")
                     result = await db_tools.get_group_members_with_emails(gid, token)
@@ -468,11 +523,44 @@ async def _fetch_recipients(
                                 recipients.append(m["email"])
                                 names.append(m.get("name", ""))
                         scope_info = f"Group: {result['groupName']} ({len(recipients)} members)"
+                        print(f"🔍 DEBUG: found {len(recipients)} recipients for group {result['groupName']}")
                 elif target_name:
-                    scope_info = (
-                        f"⚠ Group {target_name} is not in your scope as {role}. "
-                        "You can only email groups assigned to you."
-                    )
+                    print(f"🔍 DEBUG: no matched_group found, building error message for {role}")
+                    # For better error messages, check if group exists at all (for ADMIN)
+                    group_exists_anywhere = False
+                    if role == "ADMIN":
+                        try:
+                            # ADMIN should be able to find any group, so if not found it likely doesn't exist
+                            all_search = await db_tools.search_all_groups(token, group_name=target_name)
+                            group_exists_anywhere = all_search["success"] and len(all_search["data"]) > 0
+                            print(f"🔍 DEBUG: ADMIN check group_exists_anywhere={group_exists_anywhere}")
+                        except Exception as e:
+                            print(f"❌ DEBUG: ADMIN existence check exception: {e}")
+                    
+                    # Provide specific error based on role
+                    if role == "ADMIN":
+                        if group_exists_anywhere:
+                            scope_info = f"⚠ Group {target_name} found but not accessible due to a system error."
+                        else:
+                            scope_info = f"⚠ Group {target_name} does not exist in the system. Please check the group name."
+                    elif role == "HOD":
+                        # Check if group exists in other departments  
+                        try:
+                            other_dept_search = await db_tools.search_all_groups(token, group_name=target_name)
+                            if other_dept_search["success"] and len(other_dept_search["data"]) > 0:
+                                scope_info = f"⚠ Group {target_name} exists but is not in your department."
+                            else:
+                                scope_info = f"⚠ Group {target_name} does not exist in the system."
+                        except Exception as e:
+                            print(f"❌ DEBUG: HOD cross-dept check exception: {e}")
+                            scope_info = f"⚠ Group {target_name} not found in your department."
+                    elif role == "COORDINATOR":
+                        scope_info = f"⚠ Group {target_name} is not in your assigned years. As a coordinator, you can only email groups in your assigned year/department combinations. Contact your HOD if you need to email groups outside your assigned scope."
+                    elif role == "GUIDE":
+                        scope_info = f"⚠ Group {target_name} is not assigned to you as a guide. You can only email groups you are directly guiding."
+                    else:
+                        scope_info = f"⚠ Group {target_name} is not accessible with your current role permissions."
+                    print(f"🔍 DEBUG: set scope_info='{scope_info}'")
 
     # ── ALL_GROUPS ──────────────────────────────────────
     elif scope == "ALL_GROUPS":

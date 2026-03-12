@@ -1,10 +1,9 @@
 from typing import TypedDict, Any
 import asyncio
-import logging
+import itertools
+
 from langchain_core.messages import SystemMessage, HumanMessage
 from langgraph.graph import StateGraph, START, END
-
-import itertools
 
 from config import (
     LLM_PROVIDER,
@@ -13,11 +12,6 @@ from config import (
     OLLAMA_BASE_URL, OLLAMA_MODEL,
 )
 
-# Global key rotation state
-_gemini_key_cycle = itertools.cycle(GEMINI_API_KEYS) if GEMINI_API_KEYS else iter([])
-_current_llm = None
-_failed_keys = set()  # Track temporarily failed keys
-
 from agents.intent_classifier import classify_intent
 from agents.email_agent import run_email_agent
 from agents.review_agent import run_review_agent
@@ -25,40 +19,59 @@ from agents.db_query_agent import run_db_query_agent
 from agents.idea_generator_agent import run_idea_generator_agent
 
 
-# ─── LLM instance with error handling & key rotation ────────────────────
+# ─── Rotating LLM wrapper ────────────────────────────────────────────────
 
-def _create_llm():
-    """Create LLM instance with next available API key."""
-    if LLM_PROVIDER == "gemini":
+class RotatingGeminiLLM:
+    """
+    Drop-in wrapper around ChatGoogleGenerativeAI.
+    Transparently rotates to the next API key when a 429 RESOURCE_EXHAUSTED
+    error is raised, without wasting quota on test calls.
+    """
+
+    def __init__(self):
+        if not GEMINI_API_KEYS:
+            raise ValueError("No GEMINI_API_KEYS configured")
+        self._key_cycle = itertools.cycle(GEMINI_API_KEYS)
+        self._current = self._make_llm()
+
+    def _make_llm(self):
         from langchain_google_genai import ChatGoogleGenerativeAI
-        
-        # Try to get next available key (skip recently failed ones)
-        for _ in range(len(GEMINI_API_KEYS)):
-            try_key = next(_gemini_key_cycle)
-            if try_key not in _failed_keys:
-                print(f"🔑 Using Gemini API key: ...{try_key[-8:]}")
-                return ChatGoogleGenerativeAI(
-                    model=GEMINI_MODEL,
-                    google_api_key=try_key,
-                    temperature=0.7,
-                )
-        
-        # All keys failed recently, clear the set and try again
-        _failed_keys.clear()
-        fallback_key = next(_gemini_key_cycle)
-        print(f"🔄 Retrying with key: ...{fallback_key[-8:]}")
+        key = next(self._key_cycle)
+        print(f"🔑 Gemini key: ...{key[-8:]}")
         return ChatGoogleGenerativeAI(
             model=GEMINI_MODEL,
-            google_api_key=fallback_key,
+            google_api_key=key,
             temperature=0.7,
         )
+
+    def _is_quota_error(self, e: Exception) -> bool:
+        s = str(e).lower()
+        return "resource_exhausted" in s or "429" in s or "quota" in s
+
+    async def ainvoke(self, messages):
+        for attempt in range(len(GEMINI_API_KEYS)):
+            try:
+                return await self._current.ainvoke(messages)
+            except Exception as e:
+                if self._is_quota_error(e) and attempt < len(GEMINI_API_KEYS) - 1:
+                    print(f"💥 Quota exhausted (attempt {attempt + 1}/{len(GEMINI_API_KEYS)}), rotating key...")
+                    self._current = self._make_llm()
+                    await asyncio.sleep(2)
+                    continue
+                raise
+        raise Exception(f"All {len(GEMINI_API_KEYS)} Gemini API keys quota exhausted")
+
+    def invoke(self, messages):
+        return self._current.invoke(messages)
+
+
+def _create_llm():
+    """Create the appropriate LLM based on provider config."""
+    if LLM_PROVIDER == "gemini":
+        return RotatingGeminiLLM()
     elif LLM_PROVIDER == "ollama":
         from langchain_ollama import ChatOllama
-        return ChatOllama(
-            model=OLLAMA_MODEL,
-            base_url=OLLAMA_BASE_URL,
-            temperature=0.7,
-        )
+        return ChatOllama(model=OLLAMA_MODEL, base_url=OLLAMA_BASE_URL, temperature=0.7)
     else:  # openai
         from langchain_openai import ChatOpenAI
         _REASONING_MODELS = {"o1", "o1-mini", "o3", "o3-mini", "o1-preview"}
@@ -67,56 +80,13 @@ def _create_llm():
             kwargs["temperature"] = 0.7
         return ChatOpenAI(**kwargs)
 
-async def _create_llm_with_retry():
-    """Create LLM with quota error retry logic."""
-    global _current_llm
-    
-    if LLM_PROVIDER != "gemini":
-        if not _current_llm:
-            _current_llm = _create_llm()
-        return _current_llm
-    
-    # For Gemini, always try to create fresh LLM to ensure key rotation
-    max_retries = len(GEMINI_API_KEYS) + 1
-    
-    for attempt in range(max_retries):
-        try:
-            _current_llm = _create_llm()
-            # Test the LLM with a simple call
-            await _current_llm.ainvoke([HumanMessage(content="test")])
-            return _current_llm
-        except Exception as e:
-            error_str = str(e).lower()
-            
-            # Check for quota exhaustion
-            if "resource_exhausted" in error_str or "quota" in error_str or "429" in error_str:
-                # Mark current key as temporarily failed
-                current_key = getattr(_current_llm, 'google_api_key', '') if _current_llm else ''
-                if current_key:
-                    _failed_keys.add(current_key)
-                    print(f"💥 Quota exhausted for key ...{current_key[-8:]} (attempt {attempt+1}/{max_retries})")
-                
-                if attempt < max_retries - 1:
-                    # Wait before trying next key
-                    await asyncio.sleep(2 ** attempt)  # exponential backoff
-                    continue
-            
-            # For other errors or final attempt, re-raise
-            print(f"❌ LLM creation failed: {e}")
-            raise e
-    
-    raise Exception(f"All {len(GEMINI_API_KEYS)} API keys failed")
+
+# Single shared LLM instance (RotatingGeminiLLM handles rotation internally)
+_llm = _create_llm()
+
 
 def get_llm():
-    """Get current LLM instance (synchronous version)."""
-    global _current_llm
-    if not _current_llm:
-        _current_llm = _create_llm()
-    return _current_llm
-
-async def get_llm_async():
-    """Get LLM instance with async retry logic."""
-    return await _create_llm_with_retry()
+    return _llm
 
 
 # ─── State schema ────────────────────────────────────────────────────────
@@ -139,7 +109,7 @@ class AgentState(TypedDict):
 
 async def classify_node(state: AgentState) -> dict:
     """Classify intent and inject LLM into state."""
-    llm = await get_llm_async()
+    llm = get_llm()
     intent = await classify_intent(
         state["message"], state["userRole"], llm
     )
@@ -209,7 +179,7 @@ async def general_node(state: AgentState) -> dict:
         "Keep replies concise but informative (3-6 sentences for greetings, more for detailed questions)."
     )
 
-    llm = state.get("llm") or await get_llm_async()
+    llm = state.get("llm") or get_llm()
     response = await llm.ainvoke([
         SystemMessage(content=system_prompt),
         HumanMessage(content=state["message"]),

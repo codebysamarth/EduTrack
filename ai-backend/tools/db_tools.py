@@ -24,6 +24,41 @@ async def get_my_groups(token: str) -> dict:
         return {"success": False, "data": [], "count": 0, "error": str(e)}
 
 
+async def search_all_groups(token: str, group_name: str = "", department_id: str = "") -> dict:
+    """Search for groups across all accessible departments (for ADMIN/HOD)."""
+    try:
+        params = {}
+        if department_id:
+            params["departmentId"] = department_id
+        
+        print(f"🔍 DEBUG search_all_groups: group_name='{group_name}', department_id='{department_id}', params={params}")
+        
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            r = await client.get(
+                f"{NODE_BACKEND_URL}/api/groups",
+                params=params,
+                headers=_auth_headers(token),
+            )
+            r.raise_for_status()
+            data = r.json()
+            all_groups = data if isinstance(data, list) else data.get("data", data)
+            
+            print(f"🔍 DEBUG search_all_groups: got {len(all_groups)} total groups from API")
+            
+            # Filter by group name if provided
+            if group_name:
+                filtered = [g for g in all_groups if g.get("name", "").upper() == group_name.upper()]
+                print(f"🔍 DEBUG search_all_groups: filtered to {len(filtered)} groups matching '{group_name}'")
+                if len(filtered) > 0:
+                    print(f"🔍 DEBUG search_all_groups: matching groups: {[g.get('name', '') for g in filtered]}")
+                return {"success": True, "data": filtered, "count": len(filtered), "error": None}
+            
+            return {"success": True, "data": all_groups, "count": len(all_groups), "error": None}
+    except Exception as e:
+        print(f"❌ DEBUG search_all_groups exception: {e}")
+        return {"success": False, "data": [], "count": 0, "error": str(e)}
+
+
 async def get_group_members_with_emails(group_id: str, token: str) -> dict:
     """Fetch specific group's members with their emails."""
     try:
