@@ -3,10 +3,16 @@ from typing import TypedDict, Any
 from langchain_core.messages import SystemMessage, HumanMessage
 from langgraph.graph import StateGraph, START, END
 
+import itertools
+
 from config import (
-    LLM_PROVIDER, OPENAI_API_KEY, OPENAI_MODEL,
+    LLM_PROVIDER,
+    GEMINI_API_KEYS, GEMINI_MODEL,
+    OPENAI_API_KEY, OPENAI_MODEL,
     OLLAMA_BASE_URL, OLLAMA_MODEL,
 )
+
+_gemini_key_cycle = itertools.cycle(GEMINI_API_KEYS) if GEMINI_API_KEYS else iter([])
 from agents.intent_classifier import classify_intent
 from agents.email_agent import run_email_agent
 from agents.review_agent import run_review_agent
@@ -17,14 +23,21 @@ from agents.idea_generator_agent import run_idea_generator_agent
 # ─── LLM instance (shared across all agents) ────────────────────────────
 
 def _create_llm():
-    if LLM_PROVIDER == "ollama":
+    if LLM_PROVIDER == "gemini":
+        from langchain_google_genai import ChatGoogleGenerativeAI
+        return ChatGoogleGenerativeAI(
+            model=GEMINI_MODEL,
+            google_api_key=next(_gemini_key_cycle),
+            temperature=0.7,
+        )
+    elif LLM_PROVIDER == "ollama":
         from langchain_ollama import ChatOllama
         return ChatOllama(
             model=OLLAMA_MODEL,
             base_url=OLLAMA_BASE_URL,
             temperature=0.7,
         )
-    else:
+    else:  # openai
         from langchain_openai import ChatOpenAI
         _REASONING_MODELS = {"o1", "o1-mini", "o3", "o3-mini", "o1-preview"}
         kwargs = {"model": OPENAI_MODEL, "api_key": OPENAI_API_KEY}

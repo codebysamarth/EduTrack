@@ -84,7 +84,19 @@ NEXT_PUBLIC_AI_URL=http://localhost:8000
 
 #### AI Backend — `ai-backend/.env`
 
-**Option A: Using Ollama (FREE, local)**
+**Option A: Using Google Gemini 2.5 Flash (FREE tier — recommended)**
+
+```env
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=your-gemini-api-key
+GEMINI_MODEL=gemini-2.5-flash
+NODE_BACKEND_URL=http://localhost:5000
+PORT=8000
+```
+
+Get a free API key at [aistudio.google.com](https://aistudio.google.com/apikey)
+
+**Option B: Using Ollama (100% local, no API key)**
 
 ```env
 LLM_PROVIDER=ollama
@@ -94,7 +106,7 @@ NODE_BACKEND_URL=http://localhost:5000
 PORT=8000
 ```
 
-**Option B: Using OpenAI (paid API key)**
+**Option C: Using OpenAI (paid)**
 
 ```env
 LLM_PROVIDER=openai

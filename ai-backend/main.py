@@ -1,9 +1,10 @@
+import os
 import httpx
 import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from config import OPENAI_MODEL, OLLAMA_MODEL, LLM_PROVIDER, PORT
+from config import OPENAI_MODEL, OLLAMA_MODEL, GEMINI_MODEL, LLM_PROVIDER, PORT
 from schemas import ChatRequest, ChatResponse, ActionRequest, ActionResponse, HealthResponse
 from graph.orchestrator import compiled_graph, get_llm
 from tools.google_workspace import check_gmail_connected, send_email
@@ -11,9 +12,14 @@ from tools.db_tools import post_project_review
 
 app = FastAPI(title="EduTrack AI Backend", version="1.0.0")
 
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    os.getenv("FRONTEND_URL", ""),  # deployed frontend URL
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[o for o in ALLOWED_ORIGINS if o],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -36,7 +42,11 @@ async def health_check():
 
     gmail_ok = check_gmail_connected()
 
-    model_name = OLLAMA_MODEL if LLM_PROVIDER == "ollama" else OPENAI_MODEL
+    model_name = (
+        GEMINI_MODEL if LLM_PROVIDER == "gemini"
+        else OLLAMA_MODEL if LLM_PROVIDER == "ollama"
+        else OPENAI_MODEL
+    )
     status = "healthy" if llm_ok else "degraded"
     message = "All systems operational" if (llm_ok and gmail_ok) else (
         f"LLM ({LLM_PROVIDER}) not reachable" if not llm_ok else "Gmail not connected"

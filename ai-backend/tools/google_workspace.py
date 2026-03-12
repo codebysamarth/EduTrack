@@ -35,12 +35,20 @@ def get_google_credentials():
     """
     Load credentials from token.json if exists and valid.
     If expired: auto-refresh using refresh_token.
+    On server (Render): loads token from GOOGLE_TOKEN_B64 env var.
     If no token.json: run OAuth flow (opens browser for first-time auth).
     Returns: google.oauth2.credentials.Credentials object
     """
     from google.oauth2.credentials import Credentials
     from google_auth_oauthlib.flow import InstalledAppFlow
     from google.auth.transport.requests import Request
+
+    # On deployed server: restore token.json from base64 env var
+    token_b64 = os.getenv("GOOGLE_TOKEN_B64")
+    if token_b64 and not os.path.exists(GOOGLE_TOKEN_PATH):
+        os.makedirs(os.path.dirname(GOOGLE_TOKEN_PATH), exist_ok=True)
+        with open(GOOGLE_TOKEN_PATH, "wb") as f:
+            f.write(base64.b64decode(token_b64))
 
     creds = None
 

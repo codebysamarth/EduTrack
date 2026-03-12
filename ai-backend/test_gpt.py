@@ -1,7 +1,8 @@
 """
-Quick GPT API key test — gpt-4o-mini (rate limit friendly: ~5 req/s on free tier).
+Quick Gemini API key test — gemini-2.5-flash (free tier).
 Usage:
-  1. Set OPENAI_API_KEY in .env or environment
+  1. Set GEMINI_API_KEY in ai-backend/.env
+     Get a free key at: https://aistudio.google.com/apikey
   2. Run: python test_gpt.py
 """
 
@@ -11,36 +12,37 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
-if not OPENAI_API_KEY:
-    print("ERROR: OPENAI_API_KEY not set. Add it to ai-backend/.env")
-    print('  echo OPENAI_API_KEY=sk-... >> .env')
+if not GEMINI_API_KEY:
+    print("ERROR: GEMINI_API_KEY not set. Add it to ai-backend/.env")
+    print('  GEMINI_API_KEY=your-key-here')
+    print("  Get a free key at: https://aistudio.google.com/apikey")
     exit(1)
 
 
-async def test_openai():
-    from langchain_openai import ChatOpenAI
+async def test_gemini():
+    from langchain_google_genai import ChatGoogleGenerativeAI
     from langchain_core.messages import HumanMessage
 
-    llm = ChatOpenAI(
-        model="gpt-4o-mini",
-        api_key=OPENAI_API_KEY,
-        temperature=0.7,
-        max_tokens=100,
+    llm = ChatGoogleGenerativeAI(
+        model=GEMINI_MODEL,
+        google_api_key=GEMINI_API_KEY,
+        temperature=0.8,
     )
 
-    print("Testing GPT-4o-mini API key...")
+    print(f"Testing {GEMINI_MODEL} API key...")
     print("-" * 40)
 
     try:
         response = await llm.ainvoke([
-            HumanMessage(content="What lenght of output can you generate at once?")
+            HumanMessage(content="What are your capabilities?")
         ])
-        
+
         print(f"Response: {response.content.strip()}")
         print("-" * 40)
-        print("SUCCESS — API key is valid and working!")
+        print("SUCCESS — Gemini API key is valid and working!")
 
     except Exception as e:
         print(f"FAILED: {e}")
@@ -48,4 +50,4 @@ async def test_openai():
 
 
 if __name__ == "__main__":
-    asyncio.run(test_openai())
+    asyncio.run(test_gemini())
