@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from config import OPENAI_MODEL, OLLAMA_MODEL, GEMINI_MODEL, LLM_PROVIDER, PORT
 from schemas import ChatRequest, ChatResponse, ActionRequest, ActionResponse, HealthResponse
 from graph.orchestrator import compiled_graph, get_llm
-from tools.google_workspace import check_gmail_connected, send_email
+from tools.google_workspace import check_gmail_connected, send_email, create_calendar_event
 from tools.db_tools import post_project_review
 
 app = FastAPI(title="EduTrack AI Backend", version="1.0.0")
@@ -158,6 +158,56 @@ async def execute_action(req: ActionRequest, request: Request):
             ),
             details=result,
         )
+
+    elif req.actionType == "CONFIRM_CALENDAR":
+        title = context.get("title", "Meeting")
+        start_datetime = context.get("start_datetime")
+        end_datetime = context.get("end_datetime")
+        emails = context.get("emails", [])
+        email_draft = context.get("email_draft", "")
+        add_meet_link = context.get("add_meet_link", True)
+
+        if not start_datetime or not emails:
+            return ActionResponse(
+                success=False,
+                message="Missing required calendar details (date, time, or emails).",
+            )
+
+        # 1. Create Calendar Event
+        cal_result = create_calendar_event(
+            title=title,
+            start_datetime=start_datetime,
+            end_datetime=end_datetime,
+            attendee_emails=emails,
+            description=email_draft,
+            add_meet_link=add_meet_link
+        )
+
+        if not cal_result.get("success"):
+            return ActionResponse(
+                success=False,
+                message=f"Failed to create calendar event: {cal_result.get('error')}",
+            )
+
+        meet_link = cal_result.get("meetLink")
+        meet_text = f"\nGoogle Meet Link: {meet_link}" if meet_link else ""
+        
+        # 2. Send Emails
+        body = f"{email_draft}\n{meet_text}"
+        sender_name = context.get("userName", "EduTrack Platform")
+        
+        send_result = send_email(emails, title, body, sender_name)
+        
+        if send_result.get("success"):
+            return ActionResponse(
+                success=True,
+                message=f"Calendar event created and invites sent to {len(emails)} participants!",
+            )
+        else:
+            return ActionResponse(
+                success=True,
+                message=f"Event created (Meet: {'Yes' if meet_link else 'No'}), but failed to send some emails: {send_result.get('error')}",
+            )
 
     elif req.actionType == "REGENERATE":
         return ActionResponse(

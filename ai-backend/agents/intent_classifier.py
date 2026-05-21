@@ -6,11 +6,13 @@ INTENT_LABELS = [
     "REVIEW_FEEDBACK",
     "DB_QUERY",
     "IDEA_GENERATOR",
+    "CALENDAR_SCHEDULE",
+    "PLAGIARISM_CHECK",
     "GENERAL",
 ]
 
-STUDENT_ALLOWED = {"IDEA_GENERATOR", "GENERAL"}
-FACULTY_ONLY = {"EMAIL_DRAFT", "REVIEW_FEEDBACK"}
+STUDENT_ALLOWED = {"IDEA_GENERATOR", "GENERAL", "PLAGIARISM_CHECK"}
+FACULTY_ONLY = {"EMAIL_DRAFT", "REVIEW_FEEDBACK", "CALENDAR_SCHEDULE"}
 STUDENT_ONLY = {"IDEA_GENERATOR"}
 
 SYSTEM_PROMPT = """You are an intent classifier for a College Project Management platform.
@@ -20,6 +22,8 @@ Given a user message, classify it into EXACTLY ONE of these categories:
 - REVIEW_FEEDBACK — user wants to review, approve, reject, give feedback on a project submission
 - DB_QUERY — user wants to see, list, query, check, view data: groups, projects, members, statistics, departments, faculty, students, HOD info, coordinators, guides, or any platform data
 - IDEA_GENERATOR — user wants help generating project ideas, topics, SDG-based projects, or brainstorming
+- CALENDAR_SCHEDULE — user wants to schedule a meeting, review session, presentation, or create a Google Meet link and send to students/groups
+- PLAGIARISM_CHECK — user wants to check a project for plagiarism, compare similarities, or download similarity reports
 - GENERAL — greetings, help questions, platform questions, anything that does not match above
 
 Reply with ONLY the category label. Nothing else. No explanation."""

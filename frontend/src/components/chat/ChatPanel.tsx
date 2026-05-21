@@ -344,7 +344,8 @@ export default function ChatPanel({ isOpen, onClose, userRole, user }: ChatPanel
         }
 
         case 'SEND_EMAIL':
-        case 'POST_REVIEW': {
+        case 'POST_REVIEW':
+        case 'CONFIRM_CALENDAR': {
           setActionLoading(msg.id)
           try {
             const { data } = await aiApi.post('/action', {
@@ -409,6 +410,19 @@ export default function ChatPanel({ isOpen, onClose, userRole, user }: ChatPanel
     setEditingMessageIndex(null)
     setEditingContent('')
   }, [editingMessageIndex, editingContent, messages])
+
+  /* ─── Handle calendar draft change ────────────── */
+  const handleCalendarChange = useCallback((msgIndex: number, field: string, value: unknown) => {
+    setMessages(prev => prev.map((m, i) => {
+      if (i === msgIndex && m.actionContext) {
+        return {
+          ...m,
+          actionContext: { ...m.actionContext, [field]: value }
+        }
+      }
+      return m
+    }))
+  }, [])
 
   /* ─── Render a single message bubble ──────────── */
   const renderMessage = (msg: ChatMessage, index: number) => {
@@ -490,6 +504,7 @@ export default function ChatPanel({ isOpen, onClose, userRole, user }: ChatPanel
     const isEmailDraft =
       msg.agentUsed === 'email_agent' && msg.content.includes('Subject:')
     const isReviewDraft = msg.agentUsed === 'review_agent'
+    const isCalendarDraft = msg.agentUsed === 'calendar' && msg.actionButtons?.some(b => b.action === 'CONFIRM_CALENDAR')
     const isTemplate = msg.isTemplate
 
     // Review: check approval vs rejection
@@ -532,14 +547,59 @@ export default function ChatPanel({ isOpen, onClose, userRole, user }: ChatPanel
 
         {/* Message bubble */}
         <div className={bubbleClass}>
-          <div className="text-sm text-[#C5CEE0] whitespace-pre-wrap">
-            {msg.content.split('\n').map((line, i) => (
-              <span key={i}>
-                {renderBold(line)}
-                {i < msg.content.split('\n').length - 1 && <br />}
-              </span>
-            ))}
-          </div>
+          {(!isCalendarDraft || msg.actionsUsed) && (
+            <div className="text-sm text-[#C5CEE0] whitespace-pre-wrap">
+              {msg.content.split('\n').map((line, i) => (
+                <span key={i}>
+                  {renderBold(line)}
+                  {i < msg.content.split('\n').length - 1 && <br />}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {isCalendarDraft && !msg.actionsUsed && (
+            <div className="w-full space-y-3 mt-1">
+              <div className="text-xs text-amber-400 font-semibold mb-2 flex items-center gap-2">
+                📅 Edit Calendar Details
+              </div>
+              <input 
+                type="text" 
+                value={(msg.actionContext?.title as string) || ''}
+                onChange={e => handleCalendarChange(index, 'title', e.target.value)}
+                className="w-full bg-[#0F1729] border border-[#2A3A5C] rounded-lg px-3 py-2 text-sm text-[#EEF2FF] focus:border-amber-500 transition-colors"
+                placeholder="Meeting Title"
+              />
+              <div className="flex gap-2">
+                <input 
+                  type="datetime-local" 
+                  value={(msg.actionContext?.start_datetime as string)?.slice(0, 16) || ''}
+                  onChange={e => handleCalendarChange(index, 'start_datetime', e.target.value)}
+                  className="flex-1 bg-[#0F1729] border border-[#2A3A5C] rounded-lg px-3 py-2 text-sm text-[#EEF2FF] focus:border-amber-500 transition-colors [color-scheme:dark]"
+                />
+                <input 
+                  type="datetime-local" 
+                  value={(msg.actionContext?.end_datetime as string)?.slice(0, 16) || ''}
+                  onChange={e => handleCalendarChange(index, 'end_datetime', e.target.value)}
+                  className="flex-1 bg-[#0F1729] border border-[#2A3A5C] rounded-lg px-3 py-2 text-sm text-[#EEF2FF] focus:border-amber-500 transition-colors [color-scheme:dark]"
+                />
+              </div>
+              <textarea
+                value={((msg.actionContext?.emails as string[]) || []).join(', ')}
+                onChange={e => handleCalendarChange(index, 'emails', e.target.value.split(',').map(s=>s.trim()))}
+                className="w-full bg-[#0F1729] border border-[#2A3A5C] rounded-lg px-3 py-2 text-sm text-[#EEF2FF] focus:border-amber-500 transition-colors"
+                placeholder="Emails (comma separated)"
+                rows={2}
+              />
+              <textarea
+                value={(msg.actionContext?.email_draft as string) || ''}
+                onChange={e => handleCalendarChange(index, 'email_draft', e.target.value)}
+                className="w-full bg-[#0F1729] border border-[#2A3A5C] rounded-lg px-3 py-2 text-sm text-[#EEF2FF] focus:border-amber-500 transition-colors"
+                placeholder="Email Draft Body"
+                rows={4}
+              />
+            </div>
+          )}
         </div>
 
         {/* Recipient list for email drafts */}
@@ -591,7 +651,8 @@ export default function ChatPanel({ isOpen, onClose, userRole, user }: ChatPanel
                 >
                   {actionLoading === msg.id &&
                     (btn.action === 'SEND_EMAIL' ||
-                      btn.action === 'POST_REVIEW') && (
+                      btn.action === 'POST_REVIEW' ||
+                      btn.action === 'CONFIRM_CALENDAR') && (
                       <Loader2 size={12} className="inline animate-spin mr-1" />
                     )}
                   {btn.label}

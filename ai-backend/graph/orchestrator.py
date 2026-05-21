@@ -17,6 +17,8 @@ from agents.email_agent import run_email_agent
 from agents.review_agent import run_review_agent
 from agents.db_query_agent import run_db_query_agent
 from agents.idea_generator_agent import run_idea_generator_agent
+from agents.calendar_agent import run_calendar_agent
+from agents.plagiarism_agent import run_plagiarism_agent
 
 
 # ─── Rotating LLM wrapper ────────────────────────────────────────────────
@@ -210,6 +212,14 @@ async def idea_generator_node(state: AgentState) -> dict:
     return await run_idea_generator_agent(state)
 
 
+async def calendar_node(state: AgentState) -> dict:
+    return await run_calendar_agent(state)
+
+
+async def plagiarism_node(state: AgentState) -> dict:
+    return await run_plagiarism_agent(state)
+
+
 # ─── Routing ─────────────────────────────────────────────────────────────
 
 def route_intent(state: AgentState) -> str:
@@ -220,6 +230,8 @@ def route_intent(state: AgentState) -> str:
         "REVIEW_FEEDBACK": "review",
         "DB_QUERY": "db_query",
         "IDEA_GENERATOR": "idea_generator",
+        "CALENDAR_SCHEDULE": "calendar",
+        "PLAGIARISM_CHECK": "plagiarism",
         "GENERAL": "general",
     }
     return mapping.get(intent, "general")
@@ -237,6 +249,8 @@ def build_graph():
     graph.add_node("review", review_node)
     graph.add_node("db_query", db_query_node)
     graph.add_node("idea_generator", idea_generator_node)
+    graph.add_node("calendar", calendar_node)
+    graph.add_node("plagiarism", plagiarism_node)
 
     # Entry edge
     graph.add_edge(START, "classify")
@@ -250,6 +264,8 @@ def build_graph():
             "review": "review",
             "db_query": "db_query",
             "idea_generator": "idea_generator",
+            "calendar": "calendar",
+            "plagiarism": "plagiarism",
             "general": "general",
         },
     )
@@ -260,6 +276,8 @@ def build_graph():
     graph.add_edge("review", END)
     graph.add_edge("db_query", END)
     graph.add_edge("idea_generator", END)
+    graph.add_edge("calendar", END)
+    graph.add_edge("plagiarism", END)
 
     return graph.compile()
 
