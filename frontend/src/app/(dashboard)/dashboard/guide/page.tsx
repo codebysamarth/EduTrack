@@ -20,6 +20,7 @@ import { api } from '@/lib/api'
 import { downloadAsExcel } from '@/lib/exportExcel'
 import { useAuth } from '@/context/AuthContext'
 import { toast } from 'sonner'
+import { UniquenessChecker } from '@/components/UniquenessChecker'
 
 // ─── Shared helpers ────────────────────────────────────
 function PrnBadge({ prn }: { prn: string }) {
@@ -405,6 +406,9 @@ export default function GuidePage() {
                   ))}
                 </div>
               )}
+
+              {/* Uniqueness Check */}
+              <UniquenessChecker project={reviewDialog} />
 
               {/* Only show review form for reviewable statuses */}
               {['SUBMITTED', 'UNDER_REVIEW'].includes(reviewDialog.status) && (

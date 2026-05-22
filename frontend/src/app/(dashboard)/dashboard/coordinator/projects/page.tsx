@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { downloadAsExcel } from '@/lib/exportExcel'
+import { UniquenessChecker } from '@/components/UniquenessChecker'
 
 function PrnBadge({ prn }: { prn: string }) {
   return (
@@ -370,77 +371,8 @@ export default function CoordinatorProjectsPage() {
                     </>
                   )}
 
-                  {/* ── Similarity Check ── */}
-                  <div className="mt-5 pt-4 border-t border-[#2A3A5C]">
-                    <button
-                      onClick={() => handleCheckSimilarity(detailProject)}
-                      disabled={simLoading}
-                      className="w-full py-2 border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 rounded-xl transition-all duration-200 text-sm flex items-center justify-center gap-2 disabled:opacity-60"
-                    >
-                      {simLoading ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
-                      Check Project Uniqueness
-                    </button>
-                    {simResult && (
-                      <div className={`mt-3 rounded-xl p-3 ${simResult.isUnique ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-amber-500/10 border border-amber-500/30'}`}>
-                        {simResult.isUnique ? (
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <CheckCircle2 size={14} className="text-emerald-400"/>
-                              <span className="text-emerald-400 text-xs font-medium">Project Appears Unique</span>
-                            </div>
-                            <div className="bg-[#1A2540] border border-[#2A3A5C] rounded-lg p-2.5">
-                              <p className="text-xs text-[#7A8BAF]">No similar projects found in the database.</p>
-                              <p className="text-[10px] text-[#4A5B7A] mt-1">✓ Analyzed title, abstract & domain using TF-IDF similarity</p>
-                            </div>
-                          </div>
-                        ) : (
-                          <>
-                            <p className="text-amber-400 text-xs font-medium mb-2 flex items-center gap-1"><AlertTriangle size={12} />{simResult.similarProjects.length} similar project(s) found</p>
-                            {simResult.similarProjects.map((sp) => (
-                              <div key={sp.id} className="bg-[#1A2540] border border-[#2A3A5C] rounded-lg px-3 py-2 mb-1.5 space-y-1.5">
-                                <div className="flex items-center justify-between">
-                                  <div>
-                                    <p className="text-xs text-[#EEF2FF] font-medium">{sp.title}</p>
-                                    <p className="text-[10px] text-[#4A5B7A] mt-0.5">{sp.groupName && `Group: ${sp.groupName}`}{sp.domain && ` · ${sp.domain}`}</p>
-                                  </div>
-                                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ml-2 shrink-0 ${sp.similarity >= 70 ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
-                                    {sp.similarity}% match
-                                  </span>
-                                </div>
-                                {sp.abstract && (
-                                  <div className="bg-[#0F1729] rounded p-1.5">
-                                    <p className="text-[10px] text-[#4A5B7A] line-clamp-2">{sp.abstract}</p>
-                                  </div>
-                                )}
-                                <div className="flex items-center gap-3 text-[10px]">
-                                  {sp.titleSimilarity !== undefined && (
-                                    <div className="flex items-center gap-1">
-                                      <span className="text-[#4A5B7A]">Title:</span>
-                                      <div className="w-12 h-1 bg-[#0F1729] rounded-full overflow-hidden"><div className={`h-full rounded-full ${sp.titleSimilarity >= 70 ? 'bg-red-400' : sp.titleSimilarity >= 40 ? 'bg-amber-400' : 'bg-green-400'}`} style={{width: `${sp.titleSimilarity}%`}}/></div>
-                                      <span className={sp.titleSimilarity >= 70 ? 'text-red-400' : sp.titleSimilarity >= 40 ? 'text-amber-400' : 'text-green-400'}>{sp.titleSimilarity}%</span>
-                                    </div>
-                                  )}
-                                  {sp.abstractSimilarity !== undefined && (
-                                    <div className="flex items-center gap-1">
-                                      <span className="text-[#4A5B7A]">Abstract:</span>
-                                      <div className="w-12 h-1 bg-[#0F1729] rounded-full overflow-hidden"><div className={`h-full rounded-full ${sp.abstractSimilarity >= 70 ? 'bg-red-400' : sp.abstractSimilarity >= 40 ? 'bg-amber-400' : 'bg-green-400'}`} style={{width: `${sp.abstractSimilarity}%`}}/></div>
-                                      <span className={sp.abstractSimilarity >= 70 ? 'text-red-400' : sp.abstractSimilarity >= 40 ? 'text-amber-400' : 'text-green-400'}>{sp.abstractSimilarity}%</span>
-                                    </div>
-                                  )}
-                                </div>
-                                {sp.commonTerms && sp.commonTerms.length > 0 && (
-                                  <div className="flex flex-wrap gap-0.5">
-                                    <span className="text-[#4A5B7A] text-[10px] mr-0.5">Common:</span>
-                                    {sp.commonTerms.map((term, i)=>(<span key={i} className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1 py-0 rounded">{term}</span>))}
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                  {/* Uniqueness Check */}
+                  <UniquenessChecker project={detailProject} />
                 </>
               )}
             </motion.div>

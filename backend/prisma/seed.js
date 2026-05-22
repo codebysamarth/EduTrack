@@ -464,6 +464,18 @@ async function main() {
         sdgGoals: [7, 9, 11], status: 'SUBMITTED',
       },
     },
+    // ── ENTC TY A — Group 2 (Similar project for uniqueness testing) ──
+    {
+      name: 'ENTC-TY-A-G2', dept: 'ENTC', year: 'TY', div: 'A', sem: 5, acYear: '2025-26',
+      guide: 'FAC018', coord: 'FAC017',
+      members: [{ prn: '22EC005', leader: true }, { prn: '22EC006' }],
+      project: {
+        title: 'Decentralized Academic Certificate Verification via Blockchain',
+        abstract: 'An Ethereum-based blockchain platform for issuing and verifying academic certificates. Smart contracts manage student credentials and allow secure, instant verification by third parties using QR codes.',
+        domain: 'Blockchain', techStack: 'Solidity, Hardhat, React, Node.js, Web3.js',
+        sdgGoals: [4, 9, 16], status: 'APPROVED',
+      },
+    },
   ];
 
   for (const g of groupData) {
