@@ -1,7 +1,7 @@
 import json
 from datetime import datetime, timedelta
 from langchain_core.messages import SystemMessage, HumanMessage
-from .intent_classifier import AgentState
+from graph.state import AgentState
 from tools import create_calendar_event, get_group_members_with_emails, search_all_groups, send_email
 
 CALENDAR_SYSTEM_PROMPT = """You are the Calendar & Scheduling Agent for EduTrack.

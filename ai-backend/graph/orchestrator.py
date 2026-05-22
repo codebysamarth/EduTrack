@@ -1,7 +1,8 @@
-from typing import TypedDict, Any
+from typing import Any
 import asyncio
 import itertools
 
+from .state import AgentState
 from langchain_core.messages import SystemMessage, HumanMessage
 from langgraph.graph import StateGraph, START, END
 
@@ -92,19 +93,7 @@ def get_llm():
 
 
 # ─── State schema ────────────────────────────────────────────────────────
-
-class AgentState(TypedDict):
-    message: str
-    userRole: str
-    context: dict[str, Any]
-    intent: str
-    response: str
-    agentUsed: str
-    suggestedActions: list[str]
-    isTemplate: bool
-    actionButtons: list[dict[str, str]]
-    actionContext: dict[str, Any]
-    llm: Any
+# AgentState is imported from .state
 
 
 # ─── Node functions ──────────────────────────────────────────────────────

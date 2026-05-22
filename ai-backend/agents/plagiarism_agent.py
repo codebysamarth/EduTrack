@@ -1,6 +1,6 @@
 import json
 from langchain_core.messages import SystemMessage, HumanMessage
-from .intent_classifier import AgentState
+from graph.state import AgentState
 from tools import get_projects_by_status, check_project_similarity
 
 PLAGIARISM_SYSTEM_PROMPT = """You are the Plagiarism Checker Agent for the EduTrack platform.

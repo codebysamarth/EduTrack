@@ -1,4 +1,12 @@
 import os
+import sys
+import io
+
+# Reconfigure stdout/stderr to UTF-8 on Windows to prevent UnicodeEncodeErrors with emoji prints
+if sys.platform.startswith('win'):
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+
 import httpx
 import uvicorn
 from fastapi import FastAPI, Request
