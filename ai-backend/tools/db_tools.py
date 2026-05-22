@@ -45,9 +45,22 @@ async def search_all_groups(token: str, group_name: str = "", department_id: str
             
             print(f"🔍 DEBUG search_all_groups: got {len(all_groups)} total groups from API")
             
-            # Filter by group name if provided
+            # Filter by group name if provided (with smart prefix and substring matching)
             if group_name:
-                filtered = [g for g in all_groups if g.get("name", "").upper() == group_name.upper()]
+                q_upper = group_name.upper().strip()
+                q_clean = q_upper.replace("GROUP ", "").strip()
+                
+                filtered = []
+                for g in all_groups:
+                    g_name = g.get("name", "").upper().strip()
+                    g_clean = g_name.replace("GROUP ", "").strip()
+                    
+                    if (g_name == q_upper or 
+                        g_clean == q_clean or 
+                        (q_clean and q_clean in g_clean) or 
+                        (g_clean and g_clean in q_clean)):
+                        filtered.append(g)
+                
                 print(f"🔍 DEBUG search_all_groups: filtered to {len(filtered)} groups matching '{group_name}'")
                 if len(filtered) > 0:
                     print(f"🔍 DEBUG search_all_groups: matching groups: {[g.get('name', '') for g in filtered]}")
