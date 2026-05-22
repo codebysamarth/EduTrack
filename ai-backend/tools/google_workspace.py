@@ -57,13 +57,53 @@ def get_google_credentials():
 
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
+            try:
+                creds.refresh(Request())
+            except Exception as e:
+                # Token expired or revoked (invalid_grant)
+                print(f"Error refreshing Google OAuth credentials: {e}")
+                # Remove dead token.json so we don't attempt to use it again next time
+                if os.path.exists(GOOGLE_TOKEN_PATH):
+                    try:
+                        os.remove(GOOGLE_TOKEN_PATH)
+                    except Exception:
+                        pass
+                
+                # Check if we are running in a deployed environment (Render)
+                is_render = os.getenv("RENDER") is not None
+                if is_render or not os.path.exists(GOOGLE_CLIENT_SECRET_PATH):
+                    raise RuntimeError(
+                        "Google OAuth credentials have expired or been revoked (invalid_grant).\n"
+                        "Since this is a headless/deployed environment, you must:\n"
+                        "1. Run the EduTrack backend locally once to trigger the Google login page in your browser.\n"
+                        "2. This will generate a fresh 'ai-backend/credentials/token.json' file locally.\n"
+                        "3. Base64-encode the contents of that token.json file.\n"
+                        "4. Go to your Render Dashboard and update the GOOGLE_TOKEN_B64 environment variable with the new base64 value."
+                    ) from e
+                
+                # Otherwise, reset creds so we trigger the InstalledAppFlow
+                creds = None
+
+        if not creds or not creds.valid:
             if not os.path.exists(GOOGLE_CLIENT_SECRET_PATH):
+                # Deployed server check
+                if os.getenv("RENDER") or os.getenv("GOOGLE_TOKEN_B64"):
+                    raise RuntimeError(
+                        "Google OAuth token is missing or invalid on Render.\n"
+                        "Please set the GOOGLE_TOKEN_B64 environment variable with the base64-encoded token.json generated locally."
+                    )
                 raise FileNotFoundError(
                     "client_secret.json not found in credentials/. "
-                    "See setup instructions at top of google_workspace.py"
+                    "Please place client_secret.json in ai-backend/credentials/ to enable Google Workspace integrations."
                 )
+            
+            # Deployed server safety check before running local server
+            if os.getenv("RENDER"):
+                raise RuntimeError(
+                    "Cannot start local OAuth server on a deployed/headless server (Render).\n"
+                    "Please set the GOOGLE_TOKEN_B64 environment variable with the base64-encoded token.json generated locally."
+                )
+
             flow = InstalledAppFlow.from_client_secrets_file(
                 GOOGLE_CLIENT_SECRET_PATH, GOOGLE_SCOPES
             )
@@ -71,8 +111,8 @@ def get_google_credentials():
             # http://localhost:8090/
             creds = flow.run_local_server(port=8090)
 
-        with open(GOOGLE_TOKEN_PATH, "w") as token:
-            token.write(creds.to_json())
+            with open(GOOGLE_TOKEN_PATH, "w") as token:
+                token.write(creds.to_json())
 
     return creds
 

@@ -66,13 +66,310 @@ function uid() {
   return Math.random().toString(36).slice(2, 10)
 }
 
-/** Turn **text** into <strong>text</strong> */
-function renderBold(text: string) {
-  const parts = text.split(/\*\*(.*?)\*\*/g)
-  return parts.map((part, i) =>
-    i % 2 === 1 ? <strong key={i} className="font-semibold text-[#EEF2FF]">{part}</strong> : part,
-  )
+interface MarkdownRendererProps {
+  content: string
 }
+
+function MarkdownRenderer({ content }: MarkdownRendererProps) {
+  // Pre-process text to standardize line endings
+  const lines = content.replace(/\r\n/g, '\n').split('\n')
+  
+  const blocks: React.ReactNode[] = []
+  let currentBlockType: 'p' | 'ul' | 'ol' | 'blockquote' | 'code' | null = null
+  let currentBlockLines: string[] = []
+  let codeLanguage = ''
+
+  const renderInline = (text: string): React.ReactNode => {
+    let parts: { type: 'text' | 'bold' | 'italic' | 'code' | 'link'; text: string; href?: string }[] = [
+      { type: 'text', text }
+    ]
+
+    // Parse inline code: `code`
+    parts = parts.flatMap(part => {
+      if (part.type !== 'text') return [part]
+      const subparts = part.text.split(/`([^`]+)`/g)
+      return subparts.map((subtext, i) => ({
+        type: i % 2 === 1 ? 'code' as const : 'text' as const,
+        text: subtext
+      }))
+    })
+
+    // Parse bold: **bold**
+    parts = parts.flatMap(part => {
+      if (part.type !== 'text') return [part]
+      const subparts = part.text.split(/\*\*([^*]+)\*\*/g)
+      return subparts.map((subtext, i) => ({
+        type: i % 2 === 1 ? 'bold' as const : 'text' as const,
+        text: subtext
+      }))
+    })
+
+    // Parse italic: *italic*
+    parts = parts.flatMap(part => {
+      if (part.type !== 'text') return [part]
+      const subparts = part.text.split(/\*([^*]+)\*/g)
+      return subparts.map((subtext, i) => ({
+        type: i % 2 === 1 ? 'italic' as const : 'text' as const,
+        text: subtext
+      }))
+    })
+
+    // Parse links: [text](url)
+    parts = parts.flatMap(part => {
+      if (part.type !== 'text') return [part]
+      const regex = /\[([^\]]+)\]\(([^)]+)\)/g
+      const result: typeof parts = []
+      let lastIndex = 0
+      let match
+      while ((match = regex.exec(part.text)) !== null) {
+        if (match.index > lastIndex) {
+          result.push({ type: 'text', text: part.text.substring(lastIndex, match.index) })
+        }
+        result.push({ type: 'link', text: match[1], href: match[2] })
+        lastIndex = regex.lastIndex
+      }
+      if (lastIndex < part.text.length) {
+        result.push({ type: 'text', text: part.text.substring(lastIndex) })
+      }
+      return result.length > 0 ? result : [part]
+    })
+
+    return parts.map((part, index) => {
+      switch (part.type) {
+        case 'code':
+          return (
+            <code key={index} className="bg-[#0F1729] text-amber-400 px-1.5 py-0.5 rounded font-mono text-xs border border-[#2A3A5C]">
+              {part.text}
+            </code>
+          )
+        case 'bold':
+          return (
+            <strong key={index} className="font-bold text-[#EEF2FF]">
+              {part.text}
+            </strong>
+          )
+        case 'italic':
+          return (
+            <em key={index} className="italic text-[#EEF2FF]/80">
+              {part.text}
+            </em>
+          )
+        case 'link':
+          return (
+            <a
+              key={index}
+              href={part.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-amber-400 hover:text-amber-300 underline font-medium transition-colors"
+            >
+              {part.text}
+            </a>
+          )
+        default:
+          return part.text
+      }
+    })
+  }
+
+  const flushBlock = (key: number) => {
+    if (currentBlockLines.length === 0) return null
+
+    let node: React.ReactNode = null
+    const textContent = currentBlockLines.join('\n')
+
+    switch (currentBlockType) {
+      case 'code':
+        node = (
+          <div key={key} className="relative my-3 bg-[#0F1729] rounded-xl border border-[#2A3A5C] overflow-hidden font-mono text-xs text-[#EEF2FF] shadow-inner">
+            {codeLanguage && (
+              <div className="bg-[#1A2540] border-b border-[#2A3A5C] px-4 py-1.5 text-[10px] text-[#7A8BAF] font-semibold tracking-wider uppercase flex justify-between items-center">
+                <span>{codeLanguage}</span>
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              </div>
+            )}
+            <pre className="p-4 overflow-x-auto whitespace-pre leading-relaxed select-all">
+              <code>{textContent}</code>
+            </pre>
+          </div>
+        )
+        break
+      case 'ul':
+        node = (
+          <ul key={key} className="list-disc pl-5 my-2 space-y-1 text-sm text-[#C5CEE0]">
+            {currentBlockLines.map((li, i) => (
+              <li key={i} className="pl-1">
+                {renderInline(li)}
+              </li>
+            ))}
+          </ul>
+        )
+        break
+      case 'ol':
+        node = (
+          <ol key={key} className="list-decimal pl-5 my-2 space-y-1 text-sm text-[#C5CEE0]">
+            {currentBlockLines.map((li, i) => (
+              <li key={i} className="pl-1">
+                {renderInline(li)}
+              </li>
+            ))}
+          </ol>
+        )
+        break
+      case 'blockquote':
+        node = (
+          <blockquote key={key} className="border-l-4 border-amber-500/50 bg-[#1A2540]/30 rounded-r-lg px-4 py-2.5 my-3 italic text-sm text-[#EEF2FF]/80">
+            {currentBlockLines.map((line, i) => (
+              <p key={i} className={i > 0 ? 'mt-1' : ''}>
+                {renderInline(line)}
+              </p>
+            ))}
+          </blockquote>
+        )
+        break
+      case 'p':
+        node = (
+          <p key={key} className="text-sm text-[#C5CEE0] leading-relaxed my-2 whitespace-pre-wrap">
+            {renderInline(textContent)}
+          </p>
+        )
+        break
+    }
+
+    currentBlockLines = []
+    currentBlockType = null
+    codeLanguage = ''
+    return node
+  }
+
+  let i = 0
+  while (i < lines.length) {
+    const line = lines[i]
+
+    // 1. Code block toggler
+    if (line.trim().startsWith('```')) {
+      if (currentBlockType === 'code') {
+        const flushed = flushBlock(blocks.length)
+        if (flushed) blocks.push(flushed)
+      } else {
+        const flushed = flushBlock(blocks.length)
+        if (flushed) blocks.push(flushed)
+        currentBlockType = 'code'
+        codeLanguage = line.trim().slice(3).trim()
+      }
+      i++
+      continue
+    }
+
+    if (currentBlockType === 'code') {
+      currentBlockLines.push(line)
+      i++
+      continue
+    }
+
+    // 2. Horizontal rule
+    if (line.trim() === '---' || line.trim() === '***' || line.trim() === '___') {
+      const flushed = flushBlock(blocks.length)
+      if (flushed) blocks.push(flushed)
+      blocks.push(
+        <hr key={blocks.length} className="border-[#2A3A5C] my-4" />
+      )
+      i++
+      continue
+    }
+
+    // 3. Headings
+    const headingMatch = line.match(/^(#{1,6})\s+(.+)$/)
+    if (headingMatch) {
+      const flushed = flushBlock(blocks.length)
+      if (flushed) blocks.push(flushed)
+      
+      const level = headingMatch[1].length
+      const titleText = headingMatch[2]
+      
+      let headingNode: React.ReactNode = null
+      if (level === 1) {
+        headingNode = <h1 key={blocks.length} className="font-[var(--font-sora)] font-bold text-lg text-[#EEF2FF] mt-4 mb-2 flex items-center gap-2">{renderInline(titleText)}</h1>
+      } else if (level === 2) {
+        headingNode = <h2 key={blocks.length} className="font-[var(--font-sora)] font-semibold text-base text-amber-400 mt-4 mb-2 flex items-center gap-2 border-b border-[#2A3A5C]/35 pb-1">{renderInline(titleText)}</h2>
+      } else if (level === 3) {
+        headingNode = <h3 key={blocks.length} className="font-[var(--font-sora)] font-semibold text-sm text-[#EEF2FF] mt-3.5 mb-1.5 flex items-center gap-2">{renderInline(titleText)}</h3>
+      } else {
+        headingNode = <h4 key={blocks.length} className="font-[var(--font-sora)] font-medium text-xs text-[#EEF2FF]/90 mt-3 mb-1">{renderInline(titleText)}</h4>
+      }
+      blocks.push(headingNode)
+      i++
+      continue
+    }
+
+    // 4. Blockquotes
+    if (line.startsWith('>')) {
+      if (currentBlockType !== 'blockquote') {
+        const flushed = flushBlock(blocks.length)
+        if (flushed) blocks.push(flushed)
+        currentBlockType = 'blockquote'
+      }
+      const contentOfQuote = line.slice(1).startsWith(' ') ? line.slice(2) : line.slice(1)
+      currentBlockLines.push(contentOfQuote)
+      i++
+      continue
+    }
+
+    // 5. Unordered lists
+    const ulMatch = line.match(/^(\s*)[-*+]\s+(.+)$/)
+    if (ulMatch) {
+      if (currentBlockType !== 'ul') {
+        const flushed = flushBlock(blocks.length)
+        if (flushed) blocks.push(flushed)
+        currentBlockType = 'ul'
+      }
+      currentBlockLines.push(ulMatch[2])
+      i++
+      continue
+    }
+
+    // 6. Ordered lists
+    const olMatch = line.match(/^(\s*)\d+\.\s+(.+)$/)
+    if (olMatch) {
+      if (currentBlockType !== 'ol') {
+        const flushed = flushBlock(blocks.length)
+        if (flushed) blocks.push(flushed)
+        currentBlockType = 'ol'
+      }
+      currentBlockLines.push(olMatch[2])
+      i++
+      continue
+    }
+
+    // 7. Empty line triggers flushing of list / blockquote / paragraph
+    if (line.trim() === '') {
+      const flushed = flushBlock(blocks.length)
+      if (flushed) blocks.push(flushed)
+      i++
+      continue
+    }
+
+    // 8. Regular paragraph text (can accumulate)
+    if (currentBlockType !== 'p' && currentBlockType !== null) {
+      const flushed = flushBlock(blocks.length)
+      if (flushed) blocks.push(flushed)
+    }
+    
+    if (currentBlockType === null) {
+      currentBlockType = 'p'
+    }
+    
+    currentBlockLines.push(line)
+    i++
+  }
+
+  // Flush any remaining block
+  const flushed = flushBlock(blocks.length)
+  if (flushed) blocks.push(flushed)
+
+  return <div className="space-y-1 select-text">{blocks}</div>
+}
+
 
 /* ─── Chat history types ──────────────────────────── */
 const CHAT_HISTORY_KEY = 'edutrack_chat_history'
@@ -548,14 +845,7 @@ export default function ChatPanel({ isOpen, onClose, userRole, user }: ChatPanel
         {/* Message bubble */}
         <div className={bubbleClass}>
           {(!isCalendarDraft || msg.actionsUsed) && (
-            <div className="text-sm text-[#C5CEE0] whitespace-pre-wrap">
-              {msg.content.split('\n').map((line, i) => (
-                <span key={i}>
-                  {renderBold(line)}
-                  {i < msg.content.split('\n').length - 1 && <br />}
-                </span>
-              ))}
-            </div>
+            <MarkdownRenderer content={msg.content} />
           )}
 
           {isCalendarDraft && !msg.actionsUsed && (
