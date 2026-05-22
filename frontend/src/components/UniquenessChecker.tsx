@@ -36,12 +36,12 @@ interface UniquenessCheckerProps {
   project: {
     id: string
     title: string
-    abstract?: string
-    domain?: string
+    abstract?: string | null
+    domain?: string | null
     group?: {
       id?: string
       name?: string
-    }
+    } | null
   }
 }
 
