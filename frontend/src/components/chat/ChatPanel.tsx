@@ -644,21 +644,59 @@ export default function ChatPanel({ isOpen, onClose, userRole, user }: ChatPanel
           const reportContent = (msg.actionContext?.reportContent as string) || msg.content
           const projectTitle = (msg.actionContext?.projectTitle as string) || 'Plagiarism Report'
 
-          // Convert simple markdown to HTML
+          // Convert simple markdown to HTML for the downloadable report
           const mdToHtml = (md: string): string => {
-            return md
-              .replace(/#### (.+)/g, '<h4>$1</h4>')
-              .replace(/### (.+)/g, '<h3>$1</h3>')
-              .replace(/## (.+)/g, '<h2>$1</h2>')
-              .replace(/# (.+)/g, '<h1>$1</h1>')
-              .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-              .replace(/\*(.+?)\*/g, '<em>$1</em>')
-              .replace(/^- (.+)$/gm, '<li>$1</li>')
-              .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>')
-              .replace(/(<\/ul>\s*<ul>)/g, '')
-              .replace(/---/g, '<hr/>')
-              .replace(/\n\n/g, '<br/><br/>')
-              .replace(/\n/g, '<br/>')
+            const cl = (tag: string) => '<' + '/' + tag + '>'  // closing tag helper to avoid JSX parse issues
+            const op = (tag: string) => '<' + tag + '>'        // opening tag helper
+
+            const lines = md.split('\n')
+            const out: string[] = []
+            let inList = false
+
+            for (const line of lines) {
+              const trimmed = line.trim()
+
+              // Headings
+              if (trimmed.startsWith('#### ')) {
+                if (inList) { out.push(cl('ul')); inList = false }
+                out.push(op('h4') + trimmed.slice(5) + cl('h4'))
+              } else if (trimmed.startsWith('### ')) {
+                if (inList) { out.push(cl('ul')); inList = false }
+                out.push(op('h3') + trimmed.slice(4) + cl('h3'))
+              } else if (trimmed.startsWith('## ')) {
+                if (inList) { out.push(cl('ul')); inList = false }
+                out.push(op('h2') + trimmed.slice(3) + cl('h2'))
+              } else if (trimmed.startsWith('# ')) {
+                if (inList) { out.push(cl('ul')); inList = false }
+                out.push(op('h1') + trimmed.slice(2) + cl('h1'))
+              }
+              // List items
+              else if (trimmed.startsWith('- ')) {
+                if (!inList) { out.push(op('ul')); inList = true }
+                out.push(op('li') + trimmed.slice(2) + cl('li'))
+              }
+              // Horizontal rule
+              else if (trimmed === '---') {
+                if (inList) { out.push(cl('ul')); inList = false }
+                out.push('<hr/>')
+              }
+              // Empty line
+              else if (trimmed === '') {
+                if (inList) { out.push(cl('ul')); inList = false }
+                out.push('<br/>')
+              }
+              // Normal text
+              else {
+                if (inList) { out.push(cl('ul')); inList = false }
+                out.push(op('p') + trimmed + cl('p'))
+              }
+            }
+            if (inList) out.push(cl('ul'))
+
+            // Inline formatting: bold and italic
+            return out.join('\n')
+              .replace(/\*\*(.+?)\*\*/g, op('strong') + '$1' + cl('strong'))
+              .replace(/\*(.+?)\*/g, op('em') + '$1' + cl('em'))
           }
 
           const htmlBody = mdToHtml(reportContent)
